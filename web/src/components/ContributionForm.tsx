@@ -29,7 +29,9 @@ export default function ContributionForm({
       const res = await deposit(fundId, Number(amount));
       setStatus("success");
       setTxHash(res.txHash);
-      setTimeout(() => onComplete(), 2000);
+      // The receipt has already been confirmed by deposit(); refresh the parent
+      // immediately so the treasury balance is read from the chain again.
+      setTimeout(() => void onComplete(), 500);
     } catch {
       setStatus("failed");
     }

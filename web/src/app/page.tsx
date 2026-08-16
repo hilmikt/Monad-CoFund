@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { UsersThree, Folders, PaperPlaneTilt } from "@phosphor-icons/react/dist/ssr";
+import FundDirectory from "@/components/FundDirectory";
 
 export default function Home() {
   return (
@@ -21,13 +22,26 @@ export default function Home() {
           >
             Create a CoFund
           </Link>
-          <Link 
-            href="/fund/1"
+          <Link
+            href="/history"
             className="w-full sm:w-auto px-8 py-4 bg-surface border border-border font-medium rounded-button hover:bg-surface-secondary transition-all shadow-subtle hover:scale-[0.98] active:scale-95"
           >
-            Explore Demo Pool
+            Explore CoFunds
           </Link>
         </div>
+      </section>
+
+      <section className="max-w-5xl mx-auto w-full">
+        <div className="flex items-end justify-between gap-4 mb-6">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-muted font-mono mb-2">Live on Monad</p>
+            <h2 className="font-serif text-3xl tracking-tight">Recently created funds</h2>
+          </div>
+          <Link href="/history" className="text-xs font-mono underline underline-offset-4 text-muted hover:text-foreground">
+            View all funds
+          </Link>
+        </div>
+        <FundDirectory limit={3} />
       </section>
 
       {/* Thesis Section */}

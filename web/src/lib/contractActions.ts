@@ -205,6 +205,15 @@ export async function getFundCount(): Promise<number> {
   return Number(count);
 }
 
+export async function getAllFundData(): Promise<Fund[]> {
+  const count = await getFundCount();
+  if (count === 0) return [];
+
+  return Promise.all(
+    Array.from({ length: count }, (_, index) => getFundData(index + 1))
+  );
+}
+
 // ─── WRITE: CREATE FUND ───────────────────────────────────────────────────
 
 export async function createFund(data: {

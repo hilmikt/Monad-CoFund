@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { useWallet } from "@/components/Web3Providers";
 import { Fund } from "@/lib/types";
 import { getFundData, checkIsMember } from "@/lib/contractActions";
-import { mockGetFund } from "@/lib/mockActions";
 import { MONAD_COFUND_ADDRESS } from "@/lib/contracts/MonadCoFund";
 import FundSummary from "@/components/FundSummary";
 import CategoryList from "@/components/CategoryList";
@@ -38,76 +37,41 @@ export default function FundDashboard() {
     MONAD_COFUND_ADDRESS !== "0x0000000000000000000000000000000000000000";
 
   const loadFund = useCallback(async () => {
-    if (isContractConfigured) {
-      try {
-        const data = await getFundData(fundId);
-        setFund(data);
-        setIsContractLive(true);
-
-        if (address) {
-          const memberStatus = await checkIsMember(fundId, address);
-          setIsMember(memberStatus);
-        }
-        setLoading(false);
-        return;
-      } catch (err) {
-        console.warn("Contract read failed, falling back to mock state:", err);
-      }
+    setLoading(true);
+    setError(null);
+    if (!isContractConfigured) {
+      setError("The CoFund contract address is not configured.");
+      setLoading(false);
+      return;
     }
 
     try {
-      const mockData = await mockGetFund();
-      setFund(mockData);
+      const data = await getFundData(fundId);
+      setFund(data);
+      setIsContractLive(true);
+      if (address) {
+        try {
+          setIsMember(await checkIsMember(fundId, address));
+        } catch (membershipError) {
+          console.warn("Membership read failed:", membershipError);
+          setIsMember(false);
+        }
+      } else {
+        setIsMember(false);
+      }
+    } catch (err) {
+      console.error("Live fund read failed:", err);
+      setFund(null);
       setIsContractLive(false);
-      setIsMember(true);
-    } catch {
-      setError("Unable to load fund details.");
+      setError("Unable to load this fund from Monad Testnet. Check your network and contract configuration.");
     } finally {
       setLoading(false);
     }
   }, [fundId, address, isContractConfigured]);
 
   useEffect(() => {
-    let ignore = false;
-    (async () => {
-      if (isContractConfigured) {
-        try {
-          const data = await getFundData(fundId);
-          if (!ignore) {
-            setFund(data);
-            setIsContractLive(true);
-            if (address) {
-              const memberStatus = await checkIsMember(fundId, address);
-              setIsMember(memberStatus);
-            }
-            setLoading(false);
-            return;
-          }
-        } catch (err) {
-          console.warn("Contract read failed, falling back to mock state:", err);
-        }
-      }
-
-      try {
-        const mockData = await mockGetFund();
-        if (!ignore) {
-          setFund(mockData);
-          setIsContractLive(false);
-          setIsMember(true);
-          setLoading(false);
-        }
-      } catch {
-        if (!ignore) {
-          setError("Unable to load fund details.");
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      ignore = true;
-    };
-  }, [fundId, address, isContractConfigured]);
+    void loadFund();
+  }, [loadFund]);
 
   if (loading) {
     return (

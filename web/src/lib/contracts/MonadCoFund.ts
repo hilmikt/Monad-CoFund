@@ -5,9 +5,13 @@
  * Chain: Monad Testnet (chainId: 10143)
  */
 
+const configuredAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS?.trim();
+const deployedAddress = "0x87a58B3D8c50735BEdBa2C8868932F12Cd659c54" as const;
+
 export const MONAD_COFUND_ADDRESS =
-  (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`) ??
-  "0x87a58B3D8c50735BEdBa2C8868932F12Cd659c54";
+  configuredAddress && /^0x[a-fA-F0-9]{40}$/.test(configuredAddress)
+    ? (configuredAddress as `0x${string}`)
+    : deployedAddress;
 
 export const monadCoFundABI = [
   // ─── WRITE FUNCTIONS ────────────────────────────────────────────────────

@@ -24,7 +24,8 @@ export const monadTestnet = defineChain({
 
 export const publicClient = createPublicClient({
   chain: monadTestnet,
-  transport: http(),
+  transport: http("https://testnet-rpc.monad.xyz", { timeout: 20_000 }),
+  cacheTime: 0,
 });
 
 export const MONAD_TESTNET_EXPLORER = "https://testnet.monadexplorer.com";
