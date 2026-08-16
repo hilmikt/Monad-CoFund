@@ -96,6 +96,21 @@ All 48 tests cover:
 > [!IMPORTANT]
 > Do NOT commit private keys. Use `--account` with a password-protected Foundry keystore or set the `PRIVATE_KEY` environment variable in your private environment.
 
+### Deployed Contract
+
+- **MonadCoFund**: [`0x87a58B3D8c50735BEdBa2C8868932F12Cd659c54`](https://testnet.monadscan.com/address/0x87a58B3D8c50735BEdBa2C8868932F12Cd659c54)
+- **Deployment transaction**: [`0xee055e4fb890aee2dcb558160fdc1e396f89f2fe56b444a577ef9990c93067c3`](https://testnet.monadscan.com/tx/0xee055e4fb890aee2dcb558160fdc1e396f89f2fe56b444a577ef9990c93067c3)
+- **Verification**: [MonadVision Sourcify full match](https://monadvision.com/contracts/full_match/10143/0x87a58B3D8c50735BEdBa2C8868932F12Cd659c54/)
+
+Hardhat deployment command:
+
+```bash
+cd contracts
+npx hardhat run scripts/deploy.js --network monadTestnet
+```
+
+The frontend uses the compiled `MonadCoFund` artifact ABI in `web/src/lib/contracts/MonadCoFund.ts` and the deployed address from `NEXT_PUBLIC_CONTRACT_ADDRESS`.
+
 ### 1. Set Up Deployer Wallet
 
 Import your private key into Foundry keystore (recommended):

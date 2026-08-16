@@ -7,7 +7,7 @@
 
 export const MONAD_COFUND_ADDRESS =
   (process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`) ??
-  "0x0000000000000000000000000000000000000000";
+  "0x87a58B3D8c50735BEdBa2C8868932F12Cd659c54";
 
 export const monadCoFundABI = [
   // ─── WRITE FUNCTIONS ────────────────────────────────────────────────────

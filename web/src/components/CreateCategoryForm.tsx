@@ -20,6 +20,7 @@ export default function CreateCategoryForm({
 }) {
   const [categories, setCategories] = useState<CategoryRow[]>([{ name: "", budget: "" }]);
   const [status, setStatus] = useState<TxStatus>("idle");
+  const [txHash, setTxHash] = useState<string>();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const addRow = () => setCategories([...categories, { name: "", budget: "" }]);
@@ -39,7 +40,8 @@ export default function CreateCategoryForm({
     try {
       for (let i = 0; i < valid.length; i++) {
         setCurrentIndex(i);
-        await createCategory(fundId, valid[i].name, Number(valid[i].budget));
+        const res = await createCategory(fundId, valid[i].name, Number(valid[i].budget));
+        setTxHash(res.txHash);
       }
       setStatus("success");
       setTimeout(() => onComplete(), 2000);

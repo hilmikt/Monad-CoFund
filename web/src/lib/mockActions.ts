@@ -34,6 +34,7 @@ export async function mockCreateFund(data: { name: string; purpose: string; targ
     target: data.target,
     balance: 0,
     approvalThreshold: data.threshold,
+    creator: CURRENT_USER_ADDRESS,
     members: [
       {
         address: CURRENT_USER_ADDRESS,
