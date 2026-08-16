@@ -214,6 +214,41 @@ export async function getAllFundData(): Promise<Fund[]> {
   );
 }
 
+export async function getFundSummaries(): Promise<Fund[]> {
+  const count = await getFundCount();
+  if (count === 0) return [];
+
+  const rawFunds = await Promise.all(
+    Array.from({ length: count }, (_, index) =>
+      publicClient.readContract({
+        address: MONAD_COFUND_ADDRESS,
+        abi: monadCoFundABI,
+        functionName: "getFund",
+        args: [BigInt(index + 1)],
+      })
+    )
+  );
+
+  return rawFunds.map((rawFund) => {
+    const fund = rawFund as {
+      id: bigint; name: string; purpose: string; target: bigint; balance: bigint;
+      approvalThreshold: bigint; creator: `0x${string}`;
+    };
+    return {
+      id: Number(fund.id),
+      name: fund.name,
+      purpose: fund.purpose,
+      target: toMON(fund.target),
+      balance: toMON(fund.balance),
+      approvalThreshold: Number(fund.approvalThreshold),
+      creator: fund.creator,
+      members: [],
+      categories: [],
+      proposals: [],
+    };
+  });
+}
+
 // ─── WRITE: CREATE FUND ───────────────────────────────────────────────────
 
 export async function createFund(data: {

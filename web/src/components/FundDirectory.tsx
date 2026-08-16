@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Vault } from "@phosphor-icons/react";
-import { getAllFundData } from "@/lib/contractActions";
+import { getFundSummaries } from "@/lib/contractActions";
 import { Fund } from "@/lib/types";
 import { formatMON } from "@/lib/format";
 
@@ -14,13 +14,13 @@ export default function FundDirectory({ limit }: { limit?: number }) {
 
   useEffect(() => {
     let active = true;
-    getAllFundData()
+    getFundSummaries()
       .then((data) => {
         if (active) setFunds(limit ? data.slice(-limit).reverse() : data.reverse());
       })
       .catch((readError) => {
         console.error("Fund directory read failed:", readError);
-        if (active) setError("Unable to load funds from Monad Testnet.");
+        if (active) setError(`Unable to load funds from Monad Testnet: ${readError instanceof Error ? readError.message : "RPC read failed"}`);
       })
       .finally(() => {
         if (active) setLoading(false);
