@@ -44,27 +44,20 @@ export default function FundDirectory({ limit }: { limit?: number }) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="grid gap-5 md:grid-cols-3">
       {funds.map((fund) => (
-        <Link
-          key={fund.id}
-          href={`/fund/${fund.id}`}
-          className="group bg-surface border border-border rounded-card p-6 shadow-subtle hover:bg-surface-secondary transition-colors"
-        >
-          <div className="flex items-start justify-between gap-4 mb-8">
-            <div className="w-10 h-10 rounded-full bg-green-light text-green-dark flex items-center justify-center">
-              <Vault size={20} weight="fill" />
+        <div key={fund.id} className="bezel spring hover:-translate-y-2">
+          <Link href={`/fund/${fund.id}`} className="group bezel-core block p-6 md:p-7">
+            <div className="flex items-start justify-between gap-4 mb-12">
+              <div className="w-10 h-10 rounded-full bg-foreground text-background flex items-center justify-center"><Vault size={18} weight="light" /></div>
+              <ArrowRight size={18} className="text-muted spring group-hover:translate-x-1 group-hover:-translate-y-1" />
             </div>
-            <ArrowRight size={18} className="text-muted group-hover:text-foreground transition-colors" />
-          </div>
-          <p className="text-[10px] uppercase tracking-widest text-muted font-mono mb-2">Fund #{fund.id}</p>
-          <h3 className="font-serif text-2xl mb-2 truncate">{fund.name}</h3>
-          <p className="text-sm text-muted line-clamp-2 min-h-10">{fund.purpose}</p>
-          <div className="mt-6 pt-4 border-t border-border flex justify-between text-xs font-mono">
-            <span className="text-muted">Treasury</span>
-            <span>{formatMON(fund.balance)}</span>
-          </div>
-        </Link>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted font-mono mb-2">Fund / {String(fund.id).padStart(2, "0")}</p>
+            <h3 className="font-serif text-3xl mb-2 truncate tracking-tight">{fund.name}</h3>
+            <p className="text-sm text-muted line-clamp-2 min-h-10">{fund.purpose}</p>
+            <div className="mt-8 pt-4 border-t border-black/10 flex justify-between text-xs font-mono"><span className="text-muted">Treasury</span><span>{formatMON(fund.balance)}</span></div>
+          </Link>
+        </div>
       ))}
     </div>
   );

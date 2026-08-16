@@ -7,10 +7,11 @@ import { Vault, Users, Folders } from "@phosphor-icons/react";
 export default function FundSummary({ fund }: { fund: Fund }) {
   const totalAllocated = fund.categories.reduce((sum, c) => sum + c.allocated, 0);
   const totalSpent = fund.categories.reduce((sum, c) => sum + c.spent, 0);
-  const percentage = Math.min(100, Math.round((totalSpent / totalAllocated) * 100));
+  const percentage = totalAllocated > 0 ? Math.min(100, Math.round((totalSpent / totalAllocated) * 100)) : 0;
 
   return (
-    <div className="border border-border rounded-card bg-surface p-8 shadow-subtle mb-8">
+    <div className="bezel mb-8">
+      <div className="bezel-core bg-surface p-7 md:p-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-border">
         <div>
           <div className="flex items-center gap-2 text-xs tracking-widest uppercase text-muted font-mono font-medium mb-2">
@@ -56,6 +57,7 @@ export default function FundSummary({ fund }: { fund: Fund }) {
             style={{ width: `${percentage}%` }}
           />
         </div>
+      </div>
       </div>
     </div>
   );
