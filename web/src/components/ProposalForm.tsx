@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useWallet } from "./Web3Providers";
 import { Fund } from "@/lib/types";
 import { createProposal } from "@/lib/contractActions";
 import { isPositiveAmount, isValidAddress } from "@/lib/validation";
@@ -17,7 +17,7 @@ export default function ProposalForm({
   fund: Fund;
   onComplete: () => void;
 }) {
-  const { address } = useAccount();
+  const { address } = useWallet();
   const [categoryId, setCategoryId] = useState<number>(fund.categories[0]?.id || 1);
   const [recipient, setRecipient] = useState(address ?? "");
   const [amount, setAmount] = useState("");

@@ -1,17 +1,165 @@
 "use client";
 
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import { WagmiProvider } from "wagmi";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { wagmiConfig, queryClient } from "@/lib/wagmi";
-import "@rainbow-me/rainbowkit/styles.css";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createWalletClient, custom, parseEther } from "viem";
+import { monadTestnet, publicClient } from "@/lib/wagmi";
 
-export default function Web3Providers({ children }: { children: React.ReactNode }) {
+interface WalletContextType {
+  address: `0x${string}` | null;
+  isConnected: boolean;
+  chainId: number | null;
+  connectWallet: () => Promise<void>;
+  disconnectWallet: () => void;
+  switchNetwork: () => Promise<void>;
+  balance: string;
+}
+
+const WalletContext = createContext<WalletContextType>({
+  address: null,
+  isConnected: false,
+  chainId: null,
+  connectWallet: async () => {},
+  disconnectWallet: () => {},
+  switchNetwork: async () => {},
+  balance: "0",
+});
+
+export function Web3Provider({ children }: { children: ReactNode }) {
+  const [address, setAddress] = useState<`0x${string}` | null>(null);
+  const [chainId, setChainId] = useState<number | null>(null);
+  const [balance, setBalance] = useState("0");
+
+  const getEthereum = () => {
+    if (typeof window !== "undefined" && (window as any).ethereum) {
+      return (window as any).ethereum;
+    }
+    return null;
+  };
+
+  const updateBalance = async (addr: `0x${string}`) => {
+    try {
+      const bal = await publicClient.getBalance({ address: addr });
+      setBalance((Number(bal) / 1e18).toFixed(4));
+    } catch {
+      setBalance("0");
+    }
+  };
+
+  const checkConnected = async () => {
+    const ethereum = getEthereum();
+    if (!ethereum) return;
+    try {
+      const accounts = await ethereum.request({ method: "eth_accounts" });
+      if (accounts && accounts.length > 0) {
+        const addr = accounts[0] as `0x${string}`;
+        setAddress(addr);
+        const chain = await ethereum.request({ method: "eth_chainId" });
+        setChainId(parseInt(chain, 16));
+        updateBalance(addr);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    checkConnected();
+    const ethereum = getEthereum();
+    if (ethereum) {
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts.length === 0) {
+          setAddress(null);
+          setBalance("0");
+        } else {
+          const addr = accounts[0] as `0x${string}`;
+          setAddress(addr);
+          updateBalance(addr);
+        }
+      };
+
+      const handleChainChanged = (chain: string) => {
+        setChainId(parseInt(chain, 16));
+      };
+
+      ethereum.on("accountsChanged", handleAccountsChanged);
+      ethereum.on("chainChanged", handleChainChanged);
+
+      return () => {
+        ethereum.removeListener("accountsChanged", handleAccountsChanged);
+        ethereum.removeListener("chainChanged", handleChainChanged);
+      };
+    }
+  }, []);
+
+  const connectWallet = async () => {
+    const ethereum = getEthereum();
+    if (!ethereum) {
+      alert("Please install MetaMask or another EVM wallet to connect.");
+      return;
+    }
+    try {
+      const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+      if (accounts && accounts.length > 0) {
+        const addr = accounts[0] as `0x${string}`;
+        setAddress(addr);
+        const chain = await ethereum.request({ method: "eth_chainId" });
+        setChainId(parseInt(chain, 16));
+        updateBalance(addr);
+      }
+    } catch (err: any) {
+      console.error("Wallet connection failed:", err);
+    }
+  };
+
+  const disconnectWallet = () => {
+    setAddress(null);
+    setBalance("0");
+  };
+
+  const switchNetwork = async () => {
+    const ethereum = getEthereum();
+    if (!ethereum) return;
+    try {
+      await ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: `0x${monadTestnet.id.toString(16)}` }],
+      });
+    } catch (switchError: any) {
+      if (switchError.code === 4902) {
+        try {
+          await ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [
+              {
+                chainId: `0x${monadTestnet.id.toString(16)}`,
+                chainName: monadTestnet.name,
+                nativeCurrency: monadTestnet.nativeCurrency,
+                rpcUrls: monadTestnet.rpcUrls.default.http,
+                blockExplorerUrls: [monadTestnet.blockExplorers.default.url],
+              },
+            ],
+          });
+        } catch {}
+      }
+    }
+  };
+
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>{children}</RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <WalletContext.Provider
+      value={{
+        address,
+        isConnected: !!address,
+        chainId,
+        connectWallet,
+        disconnectWallet,
+        switchNetwork,
+        balance,
+      }}
+    >
+      {children}
+    </WalletContext.Provider>
   );
 }
+
+export function useWallet() {
+  return useContext(WalletContext);
+}
+export default Web3Provider;

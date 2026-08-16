@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, useBalance } from "wagmi";
+import { useWallet } from "./Web3Providers";
 import { deposit } from "@/lib/contractActions";
 import { isPositiveAmount } from "@/lib/validation";
 import TransactionStatus, { TxStatus } from "./TransactionStatus";
 import { Coins } from "@phosphor-icons/react";
-import { formatEther } from "viem";
 import { MONAD_TESTNET_EXPLORER } from "@/lib/wagmi";
 
 export default function ContributionForm({
@@ -16,8 +15,7 @@ export default function ContributionForm({
   fundId: number;
   onComplete: () => void;
 }) {
-  const { address } = useAccount();
-  const { data: balance } = useBalance({ address });
+  const { balance } = useWallet();
   const [amount, setAmount] = useState("5");
   const [status, setStatus] = useState<TxStatus>("idle");
   const [txHash, setTxHash] = useState<string>();
@@ -50,8 +48,6 @@ export default function ContributionForm({
     );
   }
 
-  const userBalanceMON = balance ? parseFloat(formatEther(balance.value)).toFixed(4) : "—";
-
   return (
     <form onSubmit={handleSubmit} className="p-6">
       <div className="mb-6 flex items-center gap-3">
@@ -77,7 +73,7 @@ export default function ContributionForm({
         />
         <div className="flex justify-between mt-2 text-xs text-muted">
           <span>Your wallet balance</span>
-          <span className="font-mono">{userBalanceMON} MON</span>
+          <span className="font-mono">{balance || "0.00"} MON</span>
         </div>
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAccount } from "wagmi";
+import { useWallet } from "@/components/Web3Providers";
 import { createFund } from "@/lib/contractActions";
 import { isPositiveAmount } from "@/lib/validation";
 import TransactionStatus, { TxStatus } from "@/components/TransactionStatus";
@@ -12,7 +12,7 @@ import { MONAD_COFUND_ADDRESS } from "@/lib/contracts/MonadCoFund";
 
 export default function CreateFundPage() {
   const router = useRouter();
-  const { isConnected } = useAccount();
+  const { isConnected } = useWallet();
   const [name, setName] = useState("Goa Trip");
   const [purpose, setPurpose] = useState("Shared expenses for our Goa trip");
   const [target, setTarget] = useState("100");

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { useAccount } from "wagmi";
+import { useWallet } from "@/components/Web3Providers";
 import { Fund } from "@/lib/types";
 import { getFundData, checkIsMember } from "@/lib/contractActions";
 import { mockGetFund } from "@/lib/mockActions";
@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 export default function FundDashboard() {
   const params = useParams();
   const fundId = Number(params?.fundId) || 1;
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWallet();
 
   const [fund, setFund] = useState<Fund | null>(null);
   const [loading, setLoading] = useState(true);

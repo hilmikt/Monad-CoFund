@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, useSwitchChain } from "wagmi";
+import { useWallet } from "./Web3Providers";
 import { joinFund } from "@/lib/contractActions";
 import { monadTestnet } from "@/lib/wagmi";
 import TransactionStatus, { TxStatus } from "./TransactionStatus";
 import { ArrowRight } from "@phosphor-icons/react";
 
 export default function JoinFundButton({ fundId, onJoined }: { fundId: number; onJoined: () => void }) {
-  const { address, isConnected, chainId } = useAccount();
-  const { switchChain } = useSwitchChain();
+  const { address, isConnected, chainId, switchNetwork } = useWallet();
   const [status, setStatus] = useState<TxStatus>("idle");
   const [txHash, setTxHash] = useState<string>();
 
@@ -18,7 +17,7 @@ export default function JoinFundButton({ fundId, onJoined }: { fundId: number; o
   const handleJoin = async () => {
     if (!address) return;
     if (isWrongNetwork) {
-      switchChain({ chainId: monadTestnet.id });
+      await switchNetwork();
       return;
     }
     setStatus("confirming");

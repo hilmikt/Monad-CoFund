@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import { useWallet } from "./Web3Providers";
 import { Category, Proposal } from "@/lib/types";
 import { formatAddress, formatMON } from "@/lib/format";
 import { approveProposal, executeProposal, hasApprovedProposal } from "@/lib/contractActions";
@@ -23,7 +23,7 @@ export default function ProposalCard({
   treasuryBalance: number;
   onUpdate: () => void;
 }) {
-  const { address } = useAccount();
+  const { address } = useWallet();
   const [status, setStatus] = useState<TxStatus>("idle");
   const [txHash, setTxHash] = useState<string>();
   const [alreadyApproved, setAlreadyApproved] = useState(false);

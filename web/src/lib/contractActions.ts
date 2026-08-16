@@ -1,43 +1,45 @@
 /**
  * contractActions.ts
  *
- * Real contract interaction layer for Monad CoFund.
- * Replaces the mock service layer (mockActions.ts).
- *
- * All functions accept human-readable MON amounts and convert to wei internally.
- * All bigint return values from wagmi are normalised to number/string.
- *
- * To swap back to mock (dev/testing), import from mockActions.ts instead.
- * The function signatures are intentionally identical.
+ * Real contract interaction layer for Monad CoFund using viem.
+ * Interacts directly with the on-chain MonadCoFund contract on Monad Testnet.
  */
 
-import {
-  readContract,
-  writeContract,
-  waitForTransactionReceipt,
-  getAccount,
-} from "@wagmi/core";
-import { parseEther, formatEther, decodeEventLog } from "viem";
-import { wagmiConfig, monadTestnet } from "./wagmi";
+import { parseEther, formatEther, decodeEventLog, createWalletClient, custom } from "viem";
+import { publicClient, monadTestnet } from "./wagmi";
 import { monadCoFundABI, MONAD_COFUND_ADDRESS } from "./contracts/MonadCoFund";
 import type { Fund, Member, Category, Proposal } from "./types";
-
-// ─── HELPERS ──────────────────────────────────────────────────────────────
 
 function toMON(wei: bigint): number {
   return parseFloat(formatEther(wei));
 }
 
-function getConnectedAddress(): `0x${string}` {
-  const { address } = getAccount(wagmiConfig);
-  if (!address) throw new Error("Wallet not connected");
-  return address;
+function getWalletClient() {
+  if (typeof window === "undefined" || !(window as any).ethereum) {
+    throw new Error("No EVM wallet detected");
+  }
+  return createWalletClient({
+    chain: monadTestnet,
+    transport: custom((window as any).ethereum),
+  });
 }
 
-async function sendTx(args: Parameters<typeof writeContract>[1]) {
-  const hash = await writeContract(wagmiConfig, args as Parameters<typeof writeContract>[1]);
-  const receipt = await waitForTransactionReceipt(wagmiConfig, { hash, chainId: monadTestnet.id });
-  if (receipt.status === "reverted") throw new Error("Transaction reverted");
+async function sendTransaction(functionName: string, args: any[], value?: bigint) {
+  const walletClient = getWalletClient();
+  const [account] = await walletClient.getAddresses();
+  if (!account) throw new Error("Wallet not connected");
+
+  const hash = await walletClient.writeContract({
+    address: MONAD_COFUND_ADDRESS,
+    abi: monadCoFundABI,
+    functionName: functionName as any,
+    args: args as any,
+    value,
+    account,
+  });
+
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  if (receipt.status === "reverted") throw new Error("Transaction reverted on-chain");
   return { hash, receipt };
 }
 
@@ -47,19 +49,46 @@ export async function getFundData(fundId: number): Promise<Fund> {
   const id = BigInt(fundId);
 
   const [rawFund, rawMembers, rawCategories, rawProposals] = await Promise.all([
-    readContract(wagmiConfig, { ...monadCoFundConfig(), functionName: "getFund", args: [id] }),
-    readContract(wagmiConfig, { ...monadCoFundConfig(), functionName: "getMembers", args: [id] }),
-    readContract(wagmiConfig, { ...monadCoFundConfig(), functionName: "getCategories", args: [id] }),
-    readContract(wagmiConfig, { ...monadCoFundConfig(), functionName: "getProposals", args: [id] }),
+    publicClient.readContract({
+      address: MONAD_COFUND_ADDRESS,
+      abi: monadCoFundABI,
+      functionName: "getFund",
+      args: [id],
+    }),
+    publicClient.readContract({
+      address: MONAD_COFUND_ADDRESS,
+      abi: monadCoFundABI,
+      functionName: "getMembers",
+      args: [id],
+    }),
+    publicClient.readContract({
+      address: MONAD_COFUND_ADDRESS,
+      abi: monadCoFundABI,
+      functionName: "getCategories",
+      args: [id],
+    }),
+    publicClient.readContract({
+      address: MONAD_COFUND_ADDRESS,
+      abi: monadCoFundABI,
+      functionName: "getProposals",
+      args: [id],
+    }),
   ]);
 
-  const connectedAddress = getAccount(wagmiConfig).address?.toLowerCase();
+  let connectedAddress: string | undefined;
+  if (typeof window !== "undefined" && (window as any).ethereum) {
+    try {
+      const accounts = await (window as any).ethereum.request({ method: "eth_accounts" });
+      if (accounts && accounts.length > 0) connectedAddress = accounts[0].toLowerCase();
+    } catch {}
+  }
 
   // Fetch contributions for each member in parallel
   const contributionAmounts = await Promise.all(
     (rawMembers as readonly `0x${string}`[]).map((addr) =>
-      readContract(wagmiConfig, {
-        ...monadCoFundConfig(),
+      publicClient.readContract({
+        address: MONAD_COFUND_ADDRESS,
+        abi: monadCoFundABI,
         functionName: "getContribution",
         args: [id, addr],
       })
@@ -116,13 +145,6 @@ export async function getFundData(fundId: number): Promise<Fund> {
   };
 }
 
-function monadCoFundConfig() {
-  return {
-    address: MONAD_COFUND_ADDRESS,
-    abi: monadCoFundABI,
-  } as const;
-}
-
 // ─── READ: HAS APPROVED ───────────────────────────────────────────────────
 
 export async function hasApprovedProposal(
@@ -130,8 +152,9 @@ export async function hasApprovedProposal(
   proposalId: number,
   member: `0x${string}`
 ): Promise<boolean> {
-  return readContract(wagmiConfig, {
-    ...monadCoFundConfig(),
+  return publicClient.readContract({
+    address: MONAD_COFUND_ADDRESS,
+    abi: monadCoFundABI,
     functionName: "hasApproved",
     args: [BigInt(fundId), BigInt(proposalId), member],
   }) as Promise<boolean>;
@@ -140,8 +163,9 @@ export async function hasApprovedProposal(
 // ─── READ: IS MEMBER ──────────────────────────────────────────────────────
 
 export async function checkIsMember(fundId: number, wallet: `0x${string}`): Promise<boolean> {
-  return readContract(wagmiConfig, {
-    ...monadCoFundConfig(),
+  return publicClient.readContract({
+    address: MONAD_COFUND_ADDRESS,
+    abi: monadCoFundABI,
     functionName: "isMember",
     args: [BigInt(fundId), wallet],
   }) as Promise<boolean>;
@@ -150,8 +174,9 @@ export async function checkIsMember(fundId: number, wallet: `0x${string}`): Prom
 // ─── READ: FUND COUNT ─────────────────────────────────────────────────────
 
 export async function getFundCount(): Promise<number> {
-  const count = await readContract(wagmiConfig, {
-    ...monadCoFundConfig(),
+  const count = await publicClient.readContract({
+    address: MONAD_COFUND_ADDRESS,
+    abi: monadCoFundABI,
     functionName: "getFundCount",
     args: [],
   });
@@ -166,19 +191,13 @@ export async function createFund(data: {
   target: number;
   threshold: number;
 }): Promise<{ success: boolean; fundId: number; txHash: string }> {
-  const { hash, receipt } = await sendTx({
-    address: MONAD_COFUND_ADDRESS,
-    abi: monadCoFundABI,
-    functionName: "createFund",
-    args: [
-      data.name,
-      data.purpose,
-      parseEther(data.target.toString()),
-      BigInt(data.threshold),
-    ],
-  });
+  const { hash, receipt } = await sendTransaction("createFund", [
+    data.name,
+    data.purpose,
+    parseEther(data.target.toString()),
+    BigInt(data.threshold),
+  ]);
 
-  // Parse FundCreated event to get the fundId
   let fundId = 0;
   for (const log of receipt.logs) {
     try {
@@ -196,12 +215,7 @@ export async function createFund(data: {
 // ─── WRITE: JOIN FUND ─────────────────────────────────────────────────────
 
 export async function joinFund(fundId: number): Promise<{ success: boolean; txHash: string }> {
-  const { hash } = await sendTx({
-    address: MONAD_COFUND_ADDRESS,
-    abi: monadCoFundABI,
-    functionName: "joinFund",
-    args: [BigInt(fundId)],
-  });
+  const { hash } = await sendTransaction("joinFund", [BigInt(fundId)]);
   return { success: true, txHash: hash };
 }
 
@@ -211,13 +225,11 @@ export async function deposit(
   fundId: number,
   amount: number
 ): Promise<{ success: boolean; txHash: string }> {
-  const { hash } = await sendTx({
-    address: MONAD_COFUND_ADDRESS,
-    abi: monadCoFundABI,
-    functionName: "deposit",
-    args: [BigInt(fundId)],
-    value: parseEther(amount.toString()),
-  });
+  const { hash } = await sendTransaction(
+    "deposit",
+    [BigInt(fundId)],
+    parseEther(amount.toString())
+  );
   return { success: true, txHash: hash };
 }
 
@@ -228,12 +240,11 @@ export async function createCategory(
   name: string,
   budget: number
 ): Promise<{ success: boolean; categoryId: number; txHash: string }> {
-  const { hash, receipt } = await sendTx({
-    address: MONAD_COFUND_ADDRESS,
-    abi: monadCoFundABI,
-    functionName: "createCategory",
-    args: [BigInt(fundId), name, parseEther(budget.toString())],
-  });
+  const { hash, receipt } = await sendTransaction("createCategory", [
+    BigInt(fundId),
+    name,
+    parseEther(budget.toString()),
+  ]);
 
   let categoryId = 0;
   for (const log of receipt.logs) {
@@ -258,18 +269,13 @@ export async function createProposal(data: {
   amount: number;
   purpose: string;
 }): Promise<{ success: boolean; txHash: string }> {
-  const { hash } = await sendTx({
-    address: MONAD_COFUND_ADDRESS,
-    abi: monadCoFundABI,
-    functionName: "createProposal",
-    args: [
-      BigInt(data.fundId),
-      BigInt(data.categoryId),
-      data.recipient as `0x${string}`,
-      parseEther(data.amount.toString()),
-      data.purpose,
-    ],
-  });
+  const { hash } = await sendTransaction("createProposal", [
+    BigInt(data.fundId),
+    BigInt(data.categoryId),
+    data.recipient as `0x${string}`,
+    parseEther(data.amount.toString()),
+    data.purpose,
+  ]);
   return { success: true, txHash: hash };
 }
 
@@ -279,12 +285,10 @@ export async function approveProposal(
   fundId: number,
   proposalId: number
 ): Promise<{ success: boolean; txHash: string }> {
-  const { hash } = await sendTx({
-    address: MONAD_COFUND_ADDRESS,
-    abi: monadCoFundABI,
-    functionName: "approveProposal",
-    args: [BigInt(fundId), BigInt(proposalId)],
-  });
+  const { hash } = await sendTransaction("approveProposal", [
+    BigInt(fundId),
+    BigInt(proposalId),
+  ]);
   return { success: true, txHash: hash };
 }
 
@@ -294,13 +298,9 @@ export async function executeProposal(
   fundId: number,
   proposalId: number
 ): Promise<{ success: boolean; txHash: string }> {
-  const { hash } = await sendTx({
-    address: MONAD_COFUND_ADDRESS,
-    abi: monadCoFundABI,
-    functionName: "executeProposal",
-    args: [BigInt(fundId), BigInt(proposalId)],
-  });
+  const { hash } = await sendTransaction("executeProposal", [
+    BigInt(fundId),
+    BigInt(proposalId),
+  ]);
   return { success: true, txHash: hash };
 }
-
-export { getConnectedAddress };
