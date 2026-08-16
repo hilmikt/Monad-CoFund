@@ -4,8 +4,16 @@ export interface Member {
   isCurrentUser: boolean;
 }
 
+export interface Category {
+  id: number;
+  name: string;
+  allocated: number;
+  spent: number;
+}
+
 export interface Proposal {
   id: number;
+  categoryId: number;
   purpose: string;
   amount: number;
   recipient: string;
@@ -24,6 +32,7 @@ export interface Fund {
   balance: number;
   approvalThreshold: number;
   members: Member[];
+  categories: Category[];
   proposals: Proposal[];
 }
 
@@ -35,50 +44,89 @@ export const MOCK_FUND: Fund = {
   name: "Goa Trip",
   purpose: "Shared expenses for our Goa trip",
   target: 100,
-  balance: 72,
-  approvalThreshold: 2,
+  balance: 100, // Total treasury MON contributed
+  approvalThreshold: 3,
   members: [
     {
       address: CURRENT_USER_ADDRESS,
-      contribution: 20,
+      contribution: 30,
       isCurrentUser: true,
     },
     {
       address: "0x8A2B09F3C6D1F91F",
-      contribution: 15,
+      contribution: 25,
       isCurrentUser: false,
     },
     {
       address: "0x4B7C5E90123A31F4",
-      contribution: 20,
+      contribution: 25,
       isCurrentUser: false,
     },
     {
       address: "0x92C4D2E57187D20A",
-      contribution: 17,
+      contribution: 20,
       isCurrentUser: false,
+    },
+  ],
+  categories: [
+    {
+      id: 1,
+      name: "Villa",
+      allocated: 40,
+      spent: 30,
+    },
+    {
+      id: 2,
+      name: "Travel",
+      allocated: 25,
+      spent: 10,
+    },
+    {
+      id: 3,
+      name: "Food",
+      allocated: 20,
+      spent: 5,
+    },
+    {
+      id: 4,
+      name: "Activities",
+      allocated: 15,
+      spent: 0,
     },
   ],
   proposals: [
     {
       id: 1,
-      purpose: "Villa booking",
+      categoryId: 1,
+      purpose: "Beach Villa Booking",
       amount: 30,
       recipient: "0x83A49F201C92A0B",
       creator: CURRENT_USER_ADDRESS,
-      approvals: 1,
-      threshold: 2,
+      approvals: 2,
+      threshold: 3,
       executed: false,
     },
     {
       id: 2,
-      purpose: "Flight tickets",
-      amount: 50,
+      categoryId: 2,
+      purpose: "Train Tickets",
+      amount: 10,
       recipient: "0x12F8B3C4E5D6A7B8",
       creator: "0x8A2B09F3C6D1F91F",
-      approvals: 2,
-      threshold: 2,
+      approvals: 3,
+      threshold: 3,
+      executed: false,
+    },
+    {
+      id: 3,
+      categoryId: 3,
+      purpose: "Welcome Dinner",
+      amount: 5,
+      recipient: "0x987A6B5C4D3E2F10",
+      creator: "0x4B7C5E90123A31F4",
+      approvals: 3,
+      threshold: 3,
       executed: true,
-    }
+    },
   ],
 };

@@ -1,28 +1,63 @@
 "use client";
 
 import { useState } from "react";
+import { Fund } from "@/lib/mockData";
 import { mockCreateProposal } from "@/lib/mockActions";
 import { isPositiveAmount, isValidAddress } from "@/lib/validation";
 import TransactionStatus, { TxStatus } from "./TransactionStatus";
-import { PaperPlaneRight } from "@phosphor-icons/react";
+import { PaperPlaneRight, Warning } from "@phosphor-icons/react";
+import { formatMON } from "@/lib/format";
 
-export default function ProposalForm({ onComplete }: { onComplete: () => void }) {
-  const [recipient, setRecipient] = useState("");
+export default function ProposalForm({ 
+  fund, 
+  onComplete 
+}: { 
+  fund: Fund;
+  onComplete: () => void;
+}) {
+  const [categoryId, setCategoryId] = useState<number>(fund.categories[0]?.id || 1);
+  const [recipient, setRecipient] = useState("0x83A49F201C92A0B");
   const [amount, setAmount] = useState("");
   const [purpose, setPurpose] = useState("");
   const [status, setStatus] = useState<TxStatus>("idle");
   const [txHash, setTxHash] = useState<string>();
 
+  const selectedCategory = fund.categories.find((c) => c.id === Number(categoryId)) || fund.categories[0];
+  const categoryRemaining = selectedCategory ? Math.max(0, selectedCategory.allocated - selectedCategory.spent) : 0;
+  
+  const numAmount = Number(amount) || 0;
+  const remainingAfterPayment = categoryRemaining - numAmount;
+
+  // Validation rules
+  const exceedsCategoryBudget = numAmount > categoryRemaining;
+  const exceedsTreasury = numAmount > fund.balance;
+
+  let validationError: string | null = null;
+  if (numAmount > 0) {
+    if (exceedsTreasury) {
+      validationError = "Insufficient treasury balance";
+    } else if (exceedsCategoryBudget) {
+      validationError = `Insufficient ${selectedCategory?.name || "category"} budget`;
+    }
+  }
+
+  const isFormValid = 
+    isValidAddress(recipient) && 
+    isPositiveAmount(amount) && 
+    purpose.length > 0 && 
+    !validationError;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValidAddress(recipient) || !isPositiveAmount(amount) || !purpose) return;
+    if (!isFormValid) return;
 
     setStatus("confirming");
     
     try {
       const res = await mockCreateProposal({
+        categoryId: selectedCategory.id,
         recipient,
-        amount: Number(amount),
+        amount: numAmount,
         purpose
       });
       if (res.success) {
@@ -36,8 +71,6 @@ export default function ProposalForm({ onComplete }: { onComplete: () => void })
       setStatus("failed");
     }
   };
-
-  const isFormValid = isValidAddress(recipient) && isPositiveAmount(amount) && purpose.length > 0;
 
   if (status !== "idle" && status !== "failed") {
     return (
@@ -55,13 +88,54 @@ export default function ProposalForm({ onComplete }: { onComplete: () => void })
         </div>
         <div>
           <h3 className="font-serif text-xl">New Spending Proposal</h3>
-          <p className="text-sm text-muted">Suggest a payment from the treasury</p>
+          <p className="text-sm text-muted">Request a payment under a budget category</p>
         </div>
       </div>
 
       <div className="space-y-4 mb-6">
+        {/* Category Selection */}
         <div>
-          <label className="block text-sm font-medium mb-2">Recipient Address</label>
+          <label className="block text-xs font-mono uppercase tracking-widest text-muted mb-2">
+            Budget Category
+          </label>
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(Number(e.target.value))}
+            className="w-full bg-surface-secondary border border-border rounded-button px-4 py-3 text-sm focus:outline-none focus:border-foreground transition-colors font-medium"
+          >
+            {fund.categories.map((cat) => {
+              const rem = Math.max(0, cat.allocated - cat.spent);
+              return (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name} ({formatMON(rem)} remaining of {formatMON(cat.allocated)})
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        {/* Selected Category Info Banner */}
+        {selectedCategory && (
+          <div className="bg-surface-secondary border border-border rounded-button p-3 text-xs font-mono flex items-center justify-between">
+            <div>
+              <span className="text-muted block">Budget Overview ({selectedCategory.name})</span>
+              <span className="font-medium text-foreground">
+                {formatMON(categoryRemaining)} remaining of {formatMON(selectedCategory.allocated)}
+              </span>
+            </div>
+            {numAmount > 0 && !exceedsCategoryBudget && (
+              <div className="text-right">
+                <span className="text-muted block">After Payment</span>
+                <span className="font-semibold text-green-dark">
+                  {formatMON(remainingAfterPayment)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div>
+          <label className="block text-xs font-mono uppercase tracking-widest text-muted mb-2">Recipient Address</label>
           <input
             type="text"
             value={recipient}
@@ -72,7 +146,7 @@ export default function ProposalForm({ onComplete }: { onComplete: () => void })
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Amount (MON)</label>
+          <label className="block text-xs font-mono uppercase tracking-widest text-muted mb-2">Amount (MON)</label>
           <input
             type="number"
             step="0.01"
@@ -84,16 +158,24 @@ export default function ProposalForm({ onComplete }: { onComplete: () => void })
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2">Purpose</label>
+          <label className="block text-xs font-mono uppercase tracking-widest text-muted mb-2">Purpose</label>
           <input
             type="text"
             value={purpose}
             onChange={(e) => setPurpose(e.target.value)}
             className="w-full bg-surface-secondary border border-border rounded-button px-4 py-3 text-sm focus:outline-none focus:border-foreground transition-colors"
-            placeholder="What is this for?"
+            placeholder="e.g. Beach Villa Booking"
           />
         </div>
       </div>
+
+      {/* Validation Error Banner */}
+      {validationError && (
+        <div className="mb-6 p-3 bg-red-light border border-red-light rounded-button text-red-dark text-xs font-mono flex items-center gap-2">
+          <Warning size={16} weight="bold" />
+          <span>{validationError}</span>
+        </div>
+      )}
 
       {status === "failed" && (
         <div className="mb-4">
@@ -104,7 +186,7 @@ export default function ProposalForm({ onComplete }: { onComplete: () => void })
       <button
         type="submit"
         disabled={!isFormValid}
-        className="w-full py-3 bg-foreground text-background font-medium rounded-button hover:bg-[#333] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full py-3 bg-foreground text-background font-medium rounded-button hover:bg-[#333] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-subtle"
       >
         Create Proposal
       </button>
