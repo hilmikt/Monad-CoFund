@@ -1,40 +1,6 @@
-export interface Member {
-  address: string;
-  contribution: number;
-  isCurrentUser: boolean;
-}
+import { Fund, Member, Category, Proposal } from "./types";
 
-export interface Category {
-  id: number;
-  name: string;
-  allocated: number;
-  spent: number;
-}
-
-export interface Proposal {
-  id: number;
-  categoryId: number;
-  purpose: string;
-  amount: number;
-  recipient: string;
-  creator: string;
-  approvals: number;
-  threshold: number;
-  executed: boolean;
-  rejected?: boolean;
-}
-
-export interface Fund {
-  id: number;
-  name: string;
-  purpose: string;
-  target: number;
-  balance: number;
-  approvalThreshold: number;
-  members: Member[];
-  categories: Category[];
-  proposals: Proposal[];
-}
+export type { Fund, Member, Category, Proposal };
 
 // Initial mock state
 export const CURRENT_USER_ADDRESS = "0x71A914b4f3bA9F21888B2A999";
@@ -46,6 +12,7 @@ export const MOCK_FUND: Fund = {
   target: 100,
   balance: 100, // Total treasury MON contributed
   approvalThreshold: 3,
+  creator: CURRENT_USER_ADDRESS,
   members: [
     {
       address: CURRENT_USER_ADDRESS,

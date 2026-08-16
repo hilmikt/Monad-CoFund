@@ -9,9 +9,10 @@ interface Props {
   status: TxStatus;
   message?: string;
   txHash?: string;
+  explorerUrl?: string;
 }
 
-export default function TransactionStatus({ status, message, txHash }: Props) {
+export default function TransactionStatus({ status, message, txHash, explorerUrl }: Props) {
   if (status === "idle") return null;
 
   const bgMap = {
@@ -47,9 +48,11 @@ export default function TransactionStatus({ status, message, txHash }: Props) {
       
       {txHash && status === "success" && (
         <a 
-          href={`#`} 
+          href={explorerUrl || `#`}
           className="mt-3 text-xs font-mono underline underline-offset-2 opacity-80 hover:opacity-100 flex items-center gap-1"
-          onClick={e => e.preventDefault()}
+          target={explorerUrl ? "_blank" : undefined}
+          rel={explorerUrl ? "noreferrer" : undefined}
+          onClick={explorerUrl ? undefined : e => e.preventDefault()}
         >
           View transaction <span>→</span>
         </a>

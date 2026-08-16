@@ -5,26 +5,46 @@
  * Interacts directly with the on-chain MonadCoFund contract on Monad Testnet.
  */
 
-import { parseEther, formatEther, decodeEventLog, createWalletClient, custom } from "viem";
+import { parseEther, formatEther, decodeEventLog, createWalletClient, custom, ContractFunctionArgs } from "viem";
 import { publicClient, monadTestnet } from "./wagmi";
 import { monadCoFundABI, MONAD_COFUND_ADDRESS } from "./contracts/MonadCoFund";
 import type { Fund, Member, Category, Proposal } from "./types";
+
+interface WindowWithEthereum {
+  ethereum?: {
+    request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  };
+}
 
 function toMON(wei: bigint): number {
   return parseFloat(formatEther(wei));
 }
 
 function getWalletClient() {
-  if (typeof window === "undefined" || !(window as any).ethereum) {
+  if (typeof window === "undefined" || !(window as WindowWithEthereum).ethereum) {
     throw new Error("No EVM wallet detected");
   }
+  const eth = (window as WindowWithEthereum).ethereum;
   return createWalletClient({
     chain: monadTestnet,
-    transport: custom((window as any).ethereum),
+    transport: custom(eth as Parameters<typeof custom>[0]),
   });
 }
 
-async function sendTransaction(functionName: string, args: any[], value?: bigint) {
+type WriteFunctionName =
+  | "createFund"
+  | "joinFund"
+  | "deposit"
+  | "createCategory"
+  | "createProposal"
+  | "approveProposal"
+  | "executeProposal";
+
+async function sendTransaction(
+  functionName: WriteFunctionName,
+  args: ContractFunctionArgs<typeof monadCoFundABI, "nonpayable" | "payable", WriteFunctionName>,
+  value?: bigint
+) {
   const walletClient = getWalletClient();
   const [account] = await walletClient.getAddresses();
   if (!account) throw new Error("Wallet not connected");
@@ -32,11 +52,11 @@ async function sendTransaction(functionName: string, args: any[], value?: bigint
   const hash = await walletClient.writeContract({
     address: MONAD_COFUND_ADDRESS,
     abi: monadCoFundABI,
-    functionName: functionName as any,
-    args: args as any,
+    functionName,
+    args,
     value,
     account,
-  });
+  } as unknown as Parameters<typeof walletClient.writeContract>[0]);
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
   if (receipt.status === "reverted") throw new Error("Transaction reverted on-chain");
@@ -76,9 +96,11 @@ export async function getFundData(fundId: number): Promise<Fund> {
   ]);
 
   let connectedAddress: string | undefined;
-  if (typeof window !== "undefined" && (window as any).ethereum) {
+  if (typeof window !== "undefined" && (window as WindowWithEthereum).ethereum) {
     try {
-      const accounts = await (window as any).ethereum.request({ method: "eth_accounts" });
+      const accounts = (await (window as WindowWithEthereum).ethereum?.request({
+        method: "eth_accounts",
+      })) as string[];
       if (accounts && accounts.length > 0) connectedAddress = accounts[0].toLowerCase();
     } catch {}
   }
