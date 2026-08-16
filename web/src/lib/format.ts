@@ -10,5 +10,7 @@ export function formatAddress(address: string, chars = 4): string {
  * Formats a number as MON currency
  */
 export function formatMON(amount: number): string {
-  return `${amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} MON`;
+  return `${amount.toLocaleString(undefined, {
+    maximumFractionDigits: 6,
+  })} MON`;
 }
