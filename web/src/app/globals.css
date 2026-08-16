@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F7F6F3;
+  --foreground: #111111;
+  
+  --surface-primary: #FFFFFF;
+  --surface-secondary: #F9F9F8;
+  --border-subtle: #EAEAEA;
+  --text-muted: #787774;
+
+  --accent-red-bg: #FDEBEC;
+  --accent-red-fg: #9F2F2D;
+  --accent-blue-bg: #E1F3FE;
+  --accent-blue-fg: #1F6C9F;
+  --accent-green-bg: #EDF3EC;
+  --accent-green-fg: #346538;
+  --accent-yellow-bg: #FBF3DB;
+  --accent-yellow-fg: #956400;
+
+  --radius-card: 12px;
+  --radius-button: 6px;
+  --radius-pill: 9999px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  
+  --color-surface: var(--surface-primary);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-border: var(--border-subtle);
+  --color-muted: var(--text-muted);
+
+  --color-red-light: var(--accent-red-bg);
+  --color-red-dark: var(--accent-red-fg);
+  --color-blue-light: var(--accent-blue-bg);
+  --color-blue-dark: var(--accent-blue-fg);
+  --color-green-light: var(--accent-green-bg);
+  --color-green-dark: var(--accent-green-fg);
+  --color-yellow-light: var(--accent-yellow-bg);
+  --color-yellow-dark: var(--accent-yellow-fg);
+
+  --font-sans: 'SF Pro Display', 'Geist Sans', 'Helvetica Neue', 'Switzer', sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', 'JetBrains Mono', monospace;
+  --font-serif: 'Lyon Text', 'Newsreader', 'Playfair Display', 'Instrument Serif', serif;
+}
+
+/* Minimalist UI resets */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+/* Base UI styles */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--foreground);
+}
+
+/* Hide scrollbar for clean aesthetics */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: var(--radius-pill);
+}
+
+@layer utilities {
+  .shadow-subtle {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+}
