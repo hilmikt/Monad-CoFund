@@ -1,6 +1,6 @@
 "use client";
 
-import { Category } from "@/lib/mockData";
+import { Category } from "@/lib/types";
 import CategoryCard from "./CategoryCard";
 
 export default function CategoryList({ categories }: { categories: Category[] }) {

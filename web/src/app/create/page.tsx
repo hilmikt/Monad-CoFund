@@ -2,13 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { mockCreateFund } from "@/lib/mockActions";
+import { useAccount } from "wagmi";
+import { createFund } from "@/lib/contractActions";
 import { isPositiveAmount } from "@/lib/validation";
 import TransactionStatus, { TxStatus } from "@/components/TransactionStatus";
-import { MagicWand } from "@phosphor-icons/react";
+import { MagicWand, Warning } from "@phosphor-icons/react";
+import { MONAD_TESTNET_EXPLORER } from "@/lib/wagmi";
+import { MONAD_COFUND_ADDRESS } from "@/lib/contracts/MonadCoFund";
 
 export default function CreateFundPage() {
   const router = useRouter();
+  const { isConnected } = useAccount();
   const [name, setName] = useState("Goa Trip");
   const [purpose, setPurpose] = useState("Shared expenses for our Goa trip");
   const [target, setTarget] = useState("100");
@@ -17,13 +21,15 @@ export default function CreateFundPage() {
   const [status, setStatus] = useState<TxStatus>("idle");
   const [txHash, setTxHash] = useState<string>();
 
+  const isContractSet = MONAD_COFUND_ADDRESS !== "0x0000000000000000000000000000000000000000";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !purpose || !isPositiveAmount(target) || !isPositiveAmount(threshold)) return;
 
-    setStatus("pending");
+    setStatus("confirming");
     try {
-      const res = await mockCreateFund({
+      const res = await createFund({
         name,
         purpose,
         target: Number(target),
@@ -33,9 +39,9 @@ export default function CreateFundPage() {
       if (res.success) {
         setStatus("success");
         setTxHash(res.txHash);
-        // Delay to show success state before redirecting
+        // Redirect to new fund's dashboard
         setTimeout(() => {
-          router.push(`/fund/${res.fundId}`);
+          router.push(`/fund/${res.fundId || 1}`);
         }, 2000);
       }
     } catch {
@@ -43,12 +49,17 @@ export default function CreateFundPage() {
     }
   };
 
-  const isFormValid = name && purpose && isPositiveAmount(target) && isPositiveAmount(threshold);
+  const isFormValid = name && purpose && isPositiveAmount(target) && isPositiveAmount(threshold) && isConnected;
 
   if (status !== "idle" && status !== "failed") {
     return (
       <div className="max-w-xl mx-auto pt-12">
-        <TransactionStatus status={status} txHash={txHash} message="CoFund created successfully ✓" />
+        <TransactionStatus 
+          status={status} 
+          txHash={txHash} 
+          message="CoFund created on Monad Testnet ✓" 
+          explorerUrl={txHash ? `${MONAD_TESTNET_EXPLORER}/tx/${txHash}` : undefined}
+        />
       </div>
     );
   }
@@ -63,6 +74,22 @@ export default function CreateFundPage() {
           Set up a new shared treasury and invite your group.
         </p>
       </div>
+
+      {!isContractSet && (
+        <div className="mb-6 p-4 bg-yellow-light border border-yellow-light rounded-card text-xs font-mono text-yellow-dark flex items-start gap-2">
+          <Warning size={16} className="shrink-0 mt-0.5" weight="bold" />
+          <div>
+            <strong>Contract address not configured.</strong> Set <code>NEXT_PUBLIC_CONTRACT_ADDRESS</code> in <code>web/.env.local</code> to interact with the deployed contract on Monad Testnet.
+          </div>
+        </div>
+      )}
+
+      {!isConnected && (
+        <div className="mb-6 p-4 bg-surface border border-border rounded-card text-xs font-mono text-muted flex items-center gap-2">
+          <Warning size={16} weight="bold" />
+          <span>Connect your wallet to deploy a CoFund.</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="bg-surface border border-border p-8 rounded-card shadow-subtle space-y-6">
         <div>
@@ -122,7 +149,7 @@ export default function CreateFundPage() {
             disabled={!isFormValid}
             className="w-full py-4 bg-foreground text-background font-medium rounded-button hover:bg-[#333] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-subtle hover:scale-[0.99] active:scale-[0.98]"
           >
-            Create CoFund
+            Create CoFund On-Chain
           </button>
         </div>
       </form>

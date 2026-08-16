@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+web/node_modules/
+contracts/lib/
+
+# Next.js Build Outputs & Cache
+web/.next/
+web/out/
+web/build/
+web/*.tsbuildinfo
+
+# Foundry Build Outputs & Cache
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*
+*.env
+web/.env.local
+PRIVATE_KEY
+
+# Logs & Temporary Files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db

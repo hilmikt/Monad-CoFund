@@ -1,22 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Fund } from "@/lib/mockData";
-import { mockCreateProposal } from "@/lib/mockActions";
+import { useAccount } from "wagmi";
+import { Fund } from "@/lib/types";
+import { createProposal } from "@/lib/contractActions";
 import { isPositiveAmount, isValidAddress } from "@/lib/validation";
 import TransactionStatus, { TxStatus } from "./TransactionStatus";
 import { PaperPlaneRight, Warning } from "@phosphor-icons/react";
 import { formatMON } from "@/lib/format";
+import { MONAD_TESTNET_EXPLORER } from "@/lib/wagmi";
 
-export default function ProposalForm({ 
-  fund, 
-  onComplete 
-}: { 
+export default function ProposalForm({
+  fund,
+  onComplete,
+}: {
   fund: Fund;
   onComplete: () => void;
 }) {
+  const { address } = useAccount();
   const [categoryId, setCategoryId] = useState<number>(fund.categories[0]?.id || 1);
-  const [recipient, setRecipient] = useState("0x83A49F201C92A0B");
+  const [recipient, setRecipient] = useState(address ?? "");
   const [amount, setAmount] = useState("");
   const [purpose, setPurpose] = useState("");
   const [status, setStatus] = useState<TxStatus>("idle");
@@ -24,27 +27,23 @@ export default function ProposalForm({
 
   const selectedCategory = fund.categories.find((c) => c.id === Number(categoryId)) || fund.categories[0];
   const categoryRemaining = selectedCategory ? Math.max(0, selectedCategory.allocated - selectedCategory.spent) : 0;
-  
+
   const numAmount = Number(amount) || 0;
   const remainingAfterPayment = categoryRemaining - numAmount;
 
-  // Validation rules
-  const exceedsCategoryBudget = numAmount > categoryRemaining;
-  const exceedsTreasury = numAmount > fund.balance;
-
   let validationError: string | null = null;
   if (numAmount > 0) {
-    if (exceedsTreasury) {
+    if (numAmount > fund.balance) {
       validationError = "Insufficient treasury balance";
-    } else if (exceedsCategoryBudget) {
+    } else if (numAmount > categoryRemaining) {
       validationError = `Insufficient ${selectedCategory?.name || "category"} budget`;
     }
   }
 
-  const isFormValid = 
-    isValidAddress(recipient) && 
-    isPositiveAmount(amount) && 
-    purpose.length > 0 && 
+  const isFormValid =
+    isValidAddress(recipient) &&
+    isPositiveAmount(amount) &&
+    purpose.length > 0 &&
     !validationError;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,21 +51,17 @@ export default function ProposalForm({
     if (!isFormValid) return;
 
     setStatus("confirming");
-    
     try {
-      const res = await mockCreateProposal({
+      const res = await createProposal({
+        fundId: fund.id,
         categoryId: selectedCategory.id,
         recipient,
         amount: numAmount,
-        purpose
+        purpose,
       });
-      if (res.success) {
-        setStatus("success");
-        setTxHash(res.txHash);
-        setTimeout(() => {
-          onComplete();
-        }, 2000);
-      }
+      setStatus("success");
+      setTxHash(res.txHash);
+      setTimeout(() => onComplete(), 2000);
     } catch {
       setStatus("failed");
     }
@@ -75,7 +70,12 @@ export default function ProposalForm({
   if (status !== "idle" && status !== "failed") {
     return (
       <div className="p-6">
-        <TransactionStatus status={status} txHash={txHash} message="Proposal created successfully" />
+        <TransactionStatus
+          status={status}
+          txHash={txHash}
+          message="Proposal created on-chain"
+          explorerUrl={txHash ? `${MONAD_TESTNET_EXPLORER}/tx/${txHash}` : undefined}
+        />
       </div>
     );
   }
@@ -123,12 +123,10 @@ export default function ProposalForm({
                 {formatMON(categoryRemaining)} remaining of {formatMON(selectedCategory.allocated)}
               </span>
             </div>
-            {numAmount > 0 && !exceedsCategoryBudget && (
+            {numAmount > 0 && !validationError && (
               <div className="text-right">
                 <span className="text-muted block">After Payment</span>
-                <span className="font-semibold text-green-dark">
-                  {formatMON(remainingAfterPayment)}
-                </span>
+                <span className="font-semibold text-green-dark">{formatMON(remainingAfterPayment)}</span>
               </div>
             )}
           </div>
@@ -149,11 +147,11 @@ export default function ProposalForm({
           <label className="block text-xs font-mono uppercase tracking-widest text-muted mb-2">Amount (MON)</label>
           <input
             type="number"
-            step="0.01"
+            step="0.001"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="w-full bg-surface-secondary border border-border rounded-button px-4 py-3 font-mono text-sm focus:outline-none focus:border-foreground transition-colors"
-            placeholder="0.00"
+            placeholder="0.000"
           />
         </div>
 
@@ -169,7 +167,6 @@ export default function ProposalForm({
         </div>
       </div>
 
-      {/* Validation Error Banner */}
       {validationError && (
         <div className="mb-6 p-3 bg-red-light border border-red-light rounded-button text-red-dark text-xs font-mono flex items-center gap-2">
           <Warning size={16} weight="bold" />

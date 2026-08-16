@@ -1,39 +1,115 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Fund } from "@/lib/mockData";
+import { useEffect, useState, useCallback } from "react";
+import { useParams } from "next/navigation";
+import { useAccount } from "wagmi";
+import { Fund } from "@/lib/types";
+import { getFundData, checkIsMember } from "@/lib/contractActions";
 import { mockGetFund } from "@/lib/mockActions";
+import { MONAD_COFUND_ADDRESS } from "@/lib/contracts/MonadCoFund";
 import FundSummary from "@/components/FundSummary";
 import CategoryList from "@/components/CategoryList";
 import MemberList from "@/components/MemberList";
 import ProposalCard from "@/components/ProposalCard";
 import ContributionForm from "@/components/ContributionForm";
 import ProposalForm from "@/components/ProposalForm";
-import { Copy, Plus, Users, Wallet } from "@phosphor-icons/react";
+import JoinFundButton from "@/components/JoinFundButton";
+import CreateCategoryForm from "@/components/CreateCategoryForm";
+import { Copy, Plus, Users, Wallet, FolderPlus, Warning } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export default function FundDashboard() {
+  const params = useParams();
+  const fundId = Number(params?.fundId) || 1;
+  const { address, isConnected } = useAccount();
+
   const [fund, setFund] = useState<Fund | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Modals / forms state
+  const [error, setError] = useState<string | null>(null);
+  const [isContractLive, setIsContractLive] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+
+  // Forms accordion states
   const [isContributeOpen, setIsContributeOpen] = useState(false);
   const [isProposalOpen, setIsProposalOpen] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
-  const fetchFund = async () => {
+  const isContractConfigured =
+    MONAD_COFUND_ADDRESS !== "0x0000000000000000000000000000000000000000";
+
+  const loadFund = useCallback(async () => {
+    if (isContractConfigured) {
+      try {
+        const data = await getFundData(fundId);
+        setFund(data);
+        setIsContractLive(true);
+
+        if (address) {
+          const memberStatus = await checkIsMember(fundId, address);
+          setIsMember(memberStatus);
+        }
+        setLoading(false);
+        return;
+      } catch (err) {
+        console.warn("Contract read failed, falling back to mock state:", err);
+      }
+    }
+
     try {
-      const data = await mockGetFund();
-      setFund(data);
+      const mockData = await mockGetFund();
+      setFund(mockData);
+      setIsContractLive(false);
+      setIsMember(true);
+    } catch {
+      setError("Unable to load fund details.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [fundId, address, isContractConfigured]);
 
   useEffect(() => {
-    fetchFund();
-  }, []);
+    let ignore = false;
+    (async () => {
+      if (isContractConfigured) {
+        try {
+          const data = await getFundData(fundId);
+          if (!ignore) {
+            setFund(data);
+            setIsContractLive(true);
+            if (address) {
+              const memberStatus = await checkIsMember(fundId, address);
+              setIsMember(memberStatus);
+            }
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.warn("Contract read failed, falling back to mock state:", err);
+        }
+      }
 
-  if (loading || !fund) {
+      try {
+        const mockData = await mockGetFund();
+        if (!ignore) {
+          setFund(mockData);
+          setIsContractLive(false);
+          setIsMember(true);
+          setLoading(false);
+        }
+      } catch {
+        if (!ignore) {
+          setError("Unable to load fund details.");
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, [fundId, address, isContractConfigured]);
+
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-[50vh]">
         <div className="animate-pulse flex flex-col items-center gap-4 text-muted">
@@ -44,6 +120,25 @@ export default function FundDashboard() {
     );
   }
 
+  if (error || !fund) {
+    return (
+      <div className="max-w-xl mx-auto text-center py-16">
+        <Warning size={48} className="mx-auto text-muted mb-4" />
+        <h2 className="text-2xl font-serif mb-2">Fund Not Found</h2>
+        <p className="text-muted text-sm mb-6">{error || "This fund does not exist on-chain."}</p>
+        <button
+          onClick={() => loadFund()}
+          className="px-6 py-2.5 bg-foreground text-background font-medium rounded-button text-sm"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const isCreator =
+    address && fund.creator && address.toLowerCase() === fund.creator.toLowerCase();
+
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
     alert("Invite link copied to clipboard!");
@@ -51,14 +146,33 @@ export default function FundDashboard() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-10">
-      
+      {/* Network / Mode Banner */}
+      {!isContractConfigured && (
+        <div className="p-4 bg-surface-secondary border border-border rounded-card text-xs font-mono text-muted flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-yellow-dark animate-ping" />
+            <span>
+              <strong>Demo Mode:</strong> Deploy contract to Monad Testnet and set{" "}
+              <code>NEXT_PUBLIC_CONTRACT_ADDRESS</code> in <code>web/.env.local</code>.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-border">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-widest bg-surface-secondary border border-border px-2.5 py-1 rounded-pill text-muted">
-            Monad CoFund Treasury
-          </span>
-          <h1 className="text-4xl md:text-5xl font-serif tracking-tight mt-3 mb-2 uppercase">{fund.name}</h1>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-mono uppercase tracking-widest bg-surface-secondary border border-border px-2.5 py-1 rounded-pill text-muted">
+              Fund #{fund.id}
+            </span>
+            {isContractLive && (
+              <span className="text-[10px] font-mono uppercase tracking-widest bg-green-light text-green-dark border border-green-light px-2.5 py-1 rounded-pill">
+                Live on Monad Testnet
+              </span>
+            )}
+          </div>
+          <h1 className="text-4xl md:text-5xl font-serif tracking-tight mb-2 uppercase">{fund.name}</h1>
           <p className="text-muted text-base max-w-xl">{fund.purpose}</p>
         </div>
         <div className="flex items-center gap-3 text-sm font-medium">
@@ -74,6 +188,11 @@ export default function FundDashboard() {
         </div>
       </div>
 
+      {/* Membership Check for live contract */}
+      {isContractLive && isConnected && !isMember && (
+        <JoinFundButton fundId={fund.id} onJoined={loadFund} />
+      )}
+
       {/* Main Grid */}
       <div className="grid md:grid-cols-3 gap-8">
         
@@ -84,7 +203,34 @@ export default function FundDashboard() {
           <FundSummary fund={fund} />
 
           {/* Budget Categories */}
-          <CategoryList categories={fund.categories} />
+          <div>
+            <CategoryList categories={fund.categories} />
+            {isCreator && (
+              <button
+                onClick={() => {
+                  setIsCategoryOpen(!isCategoryOpen);
+                  setIsContributeOpen(false);
+                  setIsProposalOpen(false);
+                }}
+                className="mt-3 text-xs font-mono text-muted hover:text-foreground flex items-center gap-1 transition-colors"
+              >
+                <FolderPlus size={14} /> {isCategoryOpen ? "Close category form" : "+ Add another category"}
+              </button>
+            )}
+          </div>
+
+          {/* Add Category Form (Creator only) */}
+          {isCategoryOpen && (
+            <div className="bg-surface border border-border rounded-card shadow-subtle overflow-hidden animate-in fade-in slide-in-from-top-4">
+              <CreateCategoryForm
+                fundId={fund.id}
+                onComplete={() => {
+                  setIsCategoryOpen(false);
+                  loadFund();
+                }}
+              />
+            </div>
+          )}
           
           {/* Action Triggers */}
           <div className="grid sm:grid-cols-2 gap-4">
@@ -92,6 +238,7 @@ export default function FundDashboard() {
               onClick={() => {
                 setIsContributeOpen(!isContributeOpen);
                 setIsProposalOpen(false);
+                setIsCategoryOpen(false);
               }}
               className={cn(
                 "py-4 font-medium rounded-button transition-all border flex items-center justify-center gap-2 text-sm shadow-subtle hover:scale-[0.99] active:scale-[0.98]",
@@ -106,6 +253,7 @@ export default function FundDashboard() {
               onClick={() => {
                 setIsProposalOpen(!isProposalOpen);
                 setIsContributeOpen(false);
+                setIsCategoryOpen(false);
               }}
               className={cn(
                 "py-4 font-medium rounded-button transition-all border flex items-center justify-center gap-2 text-sm shadow-subtle hover:scale-[0.99] active:scale-[0.98]",
@@ -121,19 +269,25 @@ export default function FundDashboard() {
           {/* Inline Forms */}
           {isContributeOpen && (
             <div className="bg-surface border border-border rounded-card shadow-subtle overflow-hidden animate-in fade-in slide-in-from-top-4">
-              <ContributionForm onComplete={() => {
-                setIsContributeOpen(false);
-                fetchFund();
-              }} />
+              <ContributionForm 
+                fundId={fund.id} 
+                onComplete={() => {
+                  setIsContributeOpen(false);
+                  loadFund();
+                }} 
+              />
             </div>
           )}
 
           {isProposalOpen && (
             <div className="bg-surface border border-border rounded-card shadow-subtle overflow-hidden animate-in fade-in slide-in-from-top-4">
-              <ProposalForm fund={fund} onComplete={() => {
-                setIsProposalOpen(false);
-                fetchFund();
-              }} />
+              <ProposalForm 
+                fund={fund} 
+                onComplete={() => {
+                  setIsProposalOpen(false);
+                  loadFund();
+                }} 
+              />
             </div>
           )}
 
@@ -155,10 +309,11 @@ export default function FundDashboard() {
                 {[...fund.proposals].reverse().map(proposal => (
                   <ProposalCard 
                     key={proposal.id} 
+                    fundId={fund.id}
                     proposal={proposal}
                     categories={fund.categories}
                     treasuryBalance={fund.balance}
-                    onUpdate={fetchFund}
+                    onUpdate={loadFund}
                   />
                 ))}
               </div>

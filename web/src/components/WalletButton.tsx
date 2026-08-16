@@ -1,45 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { formatAddress } from "@/lib/format";
-import { Wallet } from "@phosphor-icons/react";
-import { CURRENT_USER_ADDRESS } from "@/lib/mockData";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount, useChainId } from "wagmi";
+import { monadTestnet } from "@/lib/wagmi";
+import { Warning } from "@phosphor-icons/react";
 
 export default function WalletButton() {
-  const [connected, setConnected] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const handleConnect = async () => {
-    setLoading(true);
-    // Simulate wallet connection
-    await new Promise(r => setTimeout(r, 1000));
-    setConnected(true);
-    setLoading(false);
-  };
-
-  if (loading) {
-    return (
-      <button disabled className="px-4 py-2 text-sm font-medium border border-border bg-surface-secondary text-muted rounded-button transition-all">
-        Connecting...
-      </button>
-    );
-  }
-
-  if (connected) {
-    return (
-      <button className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border bg-surface rounded-button hover:bg-surface-secondary transition-all shadow-subtle">
-        <Wallet weight="bold" className="text-foreground" />
-        <span className="font-mono">{formatAddress(CURRENT_USER_ADDRESS)}</span>
-      </button>
-    );
-  }
+  const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const isWrongNetwork = isConnected && chainId !== monadTestnet.id;
 
   return (
-    <button 
-      onClick={handleConnect}
-      className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded-button hover:bg-[#333] active:scale-95 transition-all"
-    >
-      Connect Wallet
-    </button>
+    <div className="flex items-center gap-3">
+      {isWrongNetwork && (
+        <span className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-red-dark bg-red-light border border-red-light px-3 py-1.5 rounded-pill">
+          <Warning size={14} weight="bold" /> Wrong Network
+        </span>
+      )}
+      <ConnectButton
+        label="Connect Wallet"
+        accountStatus="address"
+        chainStatus="icon"
+        showBalance={false}
+      />
+    </div>
   );
 }

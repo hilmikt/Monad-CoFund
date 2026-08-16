@@ -1,26 +1,33 @@
 "use client";
 
-import { useState } from "react";
-import { Category, Proposal } from "@/lib/mockData";
+import { useEffect, useState } from "react";
+import { useAccount } from "wagmi";
+import { Category, Proposal } from "@/lib/types";
 import { formatAddress, formatMON } from "@/lib/format";
-import { mockApproveProposal, mockExecuteProposal } from "@/lib/mockActions";
+import { approveProposal, executeProposal, hasApprovedProposal } from "@/lib/contractActions";
 import TransactionStatus, { TxStatus } from "./TransactionStatus";
 import { Check, CaretRight, Warning, Folder } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { MONAD_TESTNET_EXPLORER } from "@/lib/wagmi";
 
 export default function ProposalCard({ 
+  fundId,
   proposal, 
   categories,
   treasuryBalance,
   onUpdate 
 }: { 
+  fundId: number;
   proposal: Proposal;
   categories: Category[];
   treasuryBalance: number;
   onUpdate: () => void;
 }) {
+  const { address } = useAccount();
   const [status, setStatus] = useState<TxStatus>("idle");
   const [txHash, setTxHash] = useState<string>();
+  const [alreadyApproved, setAlreadyApproved] = useState(false);
+  const [checkingApproval, setCheckingApproval] = useState(false);
 
   const category = categories.find(c => c.id === proposal.categoryId) || {
     id: proposal.categoryId,
@@ -40,18 +47,34 @@ export default function ProposalCard({
   const exceedsCategoryBudget = !isExecuted && proposal.amount > categoryRemaining;
   const exceedsTreasury = !isExecuted && proposal.amount > treasuryBalance;
 
+  // Check if current user already approved
+  useEffect(() => {
+    async function checkApproval() {
+      if (!address || isExecuted) return;
+      try {
+        setCheckingApproval(true);
+        const hasAppr = await hasApprovedProposal(fundId, proposal.id, address);
+        setAlreadyApproved(hasAppr);
+      } catch {
+        // Silently continue if check fails
+      } finally {
+        setCheckingApproval(false);
+      }
+    }
+    checkApproval();
+  }, [fundId, proposal.id, address, isExecuted]);
+
   const handleApprove = async () => {
     setStatus("confirming");
     try {
-      const res = await mockApproveProposal(proposal.id);
-      if (res.success) {
-        setStatus("success");
-        setTxHash(res.txHash);
-        setTimeout(() => {
-          setStatus("idle");
-          onUpdate();
-        }, 1500);
-      }
+      const res = await approveProposal(fundId, proposal.id);
+      setStatus("success");
+      setTxHash(res.txHash);
+      setTimeout(() => {
+        setStatus("idle");
+        setAlreadyApproved(true);
+        onUpdate();
+      }, 2000);
     } catch {
       setStatus("failed");
     }
@@ -62,15 +85,13 @@ export default function ProposalCard({
 
     setStatus("confirming");
     try {
-      const res = await mockExecuteProposal(proposal.id);
-      if (res.success) {
-        setStatus("success");
-        setTxHash(res.txHash);
-        setTimeout(() => {
-          setStatus("idle");
-          onUpdate();
-        }, 1500);
-      }
+      const res = await executeProposal(fundId, proposal.id);
+      setStatus("success");
+      setTxHash(res.txHash);
+      setTimeout(() => {
+        setStatus("idle");
+        onUpdate();
+      }, 2000);
     } catch {
       setStatus("failed");
     }
@@ -79,7 +100,11 @@ export default function ProposalCard({
   if (status !== "idle" && status !== "failed") {
     return (
       <div className="border border-border rounded-card bg-surface p-6 shadow-subtle mb-4">
-        <TransactionStatus status={status} txHash={txHash} />
+        <TransactionStatus 
+          status={status} 
+          txHash={txHash} 
+          explorerUrl={txHash ? `${MONAD_TESTNET_EXPLORER}/tx/${txHash}` : undefined}
+        />
       </div>
     );
   }
@@ -188,9 +213,13 @@ export default function ProposalCard({
           {!isReady ? (
             <button 
               onClick={handleApprove}
-              className="w-full py-2.5 border border-border bg-surface hover:bg-surface-secondary transition-all rounded-button font-medium text-sm shadow-subtle hover:scale-[0.99] active:scale-[0.98]"
+              disabled={alreadyApproved || checkingApproval}
+              className="w-full py-2.5 border border-border bg-surface hover:bg-surface-secondary transition-all rounded-button font-medium text-sm shadow-subtle hover:scale-[0.99] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Approve ({proposal.approvals}/{proposal.threshold})
+              {alreadyApproved 
+                ? `Already Approved (${proposal.approvals}/${proposal.threshold})`
+                : `Approve (${proposal.approvals}/${proposal.threshold})`
+              }
             </button>
           ) : (
             <button 

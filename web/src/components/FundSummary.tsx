@@ -1,6 +1,6 @@
 "use client";
 
-import { Fund } from "@/lib/mockData";
+import { Fund } from "@/lib/types";
 import { formatMON } from "@/lib/format";
 import { Vault, Users, Folders } from "@phosphor-icons/react";
 

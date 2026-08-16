@@ -1,13 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { mockDeposit } from "@/lib/mockActions";
+import { useAccount, useBalance } from "wagmi";
+import { deposit } from "@/lib/contractActions";
 import { isPositiveAmount } from "@/lib/validation";
 import TransactionStatus, { TxStatus } from "./TransactionStatus";
 import { Coins } from "@phosphor-icons/react";
+import { formatEther } from "viem";
+import { MONAD_TESTNET_EXPLORER } from "@/lib/wagmi";
 
-export default function ContributionForm({ onComplete }: { onComplete: () => void }) {
-  const [amount, setAmount] = useState("5.00");
+export default function ContributionForm({
+  fundId,
+  onComplete,
+}: {
+  fundId: number;
+  onComplete: () => void;
+}) {
+  const { address } = useAccount();
+  const { data: balance } = useBalance({ address });
+  const [amount, setAmount] = useState("5");
   const [status, setStatus] = useState<TxStatus>("idle");
   const [txHash, setTxHash] = useState<string>();
 
@@ -16,17 +27,11 @@ export default function ContributionForm({ onComplete }: { onComplete: () => voi
     if (!isPositiveAmount(amount)) return;
 
     setStatus("confirming");
-    
-    // Simulate transaction
     try {
-      const res = await mockDeposit(Number(amount));
-      if (res.success) {
-        setStatus("success");
-        setTxHash(res.txHash);
-        setTimeout(() => {
-          onComplete();
-        }, 2000);
-      }
+      const res = await deposit(fundId, Number(amount));
+      setStatus("success");
+      setTxHash(res.txHash);
+      setTimeout(() => onComplete(), 2000);
     } catch {
       setStatus("failed");
     }
@@ -35,10 +40,17 @@ export default function ContributionForm({ onComplete }: { onComplete: () => voi
   if (status !== "idle" && status !== "failed") {
     return (
       <div className="p-6">
-        <TransactionStatus status={status} txHash={txHash} message={`+${amount} MON contributed successfully`} />
+        <TransactionStatus
+          status={status}
+          txHash={txHash}
+          message={`+${amount} MON contributed to treasury`}
+          explorerUrl={txHash ? `${MONAD_TESTNET_EXPLORER}/tx/${txHash}` : undefined}
+        />
       </div>
     );
   }
+
+  const userBalanceMON = balance ? parseFloat(formatEther(balance.value)).toFixed(4) : "—";
 
   return (
     <form onSubmit={handleSubmit} className="p-6">
@@ -48,7 +60,7 @@ export default function ContributionForm({ onComplete }: { onComplete: () => voi
         </div>
         <div>
           <h3 className="font-serif text-xl">Contribute</h3>
-          <p className="text-sm text-muted">Add funds to the treasury</p>
+          <p className="text-sm text-muted">Add native MON to the treasury</p>
         </div>
       </div>
 
@@ -56,15 +68,16 @@ export default function ContributionForm({ onComplete }: { onComplete: () => voi
         <label className="block text-sm font-medium mb-2">Amount (MON)</label>
         <input
           type="number"
-          step="0.01"
+          step="0.001"
+          min="0"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           className="w-full bg-surface-secondary border border-border rounded-button px-4 py-3 text-lg font-mono focus:outline-none focus:border-foreground transition-colors"
-          placeholder="0.00"
+          placeholder="0.000"
         />
         <div className="flex justify-between mt-2 text-xs text-muted">
-          <span>Your balance</span>
-          <span className="font-mono">42.50 MON</span>
+          <span>Your wallet balance</span>
+          <span className="font-mono">{userBalanceMON} MON</span>
         </div>
       </div>
 

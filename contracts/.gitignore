@@ -1,0 +1,13 @@
+# Foundry build outputs & cache (generated on build)
+out/
+cache/
+broadcast/
+
+# Foundry dependencies (installed via `forge install`)
+lib/
+
+# Secrets & environment variables
+.env
+.env.local
+.env.*
+PRIVATE_KEY

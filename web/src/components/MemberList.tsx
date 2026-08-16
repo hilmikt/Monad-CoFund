@@ -1,6 +1,6 @@
 "use client";
 
-import { Member } from "@/lib/mockData";
+import { Member } from "@/lib/types";
 import { formatAddress, formatMON } from "@/lib/format";
 import { User } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";

@@ -1,6 +1,6 @@
 "use client";
 
-import { Category } from "@/lib/mockData";
+import { Category } from "@/lib/types";
 import { formatMON } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Warning, CheckCircle } from "@phosphor-icons/react";
