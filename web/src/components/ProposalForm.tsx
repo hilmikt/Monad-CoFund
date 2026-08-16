@@ -41,6 +41,7 @@ export default function ProposalForm({
   }
 
   const isFormValid =
+    !!selectedCategory &&
     isValidAddress(recipient) &&
     isPositiveAmount(amount) &&
     purpose.length > 0 &&
@@ -48,7 +49,7 @@ export default function ProposalForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid) return;
+    if (!isFormValid || !selectedCategory) return;
 
     setStatus("confirming");
     try {
@@ -101,17 +102,27 @@ export default function ProposalForm({
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(Number(e.target.value))}
+            disabled={fund.categories.length === 0}
             className="w-full bg-surface-secondary border border-border rounded-button px-4 py-3 text-sm focus:outline-none focus:border-foreground transition-colors font-medium"
           >
-            {fund.categories.map((cat) => {
-              const rem = Math.max(0, cat.allocated - cat.spent);
-              return (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name} ({formatMON(rem)} remaining of {formatMON(cat.allocated)})
-                </option>
-              );
-            })}
+            {fund.categories.length === 0 ? (
+              <option value={0}>No budget categories yet</option>
+            ) : (
+              fund.categories.map((cat) => {
+                const rem = Math.max(0, cat.allocated - cat.spent);
+                return (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name} ({formatMON(rem)} remaining of {formatMON(cat.allocated)})
+                  </option>
+                );
+              })
+            )}
           </select>
+          {fund.categories.length === 0 && (
+            <p className="mt-2 text-xs text-muted">
+              The fund creator must add a budget category before creating a proposal.
+            </p>
+          )}
         </div>
 
         {/* Selected Category Info Banner */}
