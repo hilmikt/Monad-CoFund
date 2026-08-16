@@ -32,11 +32,13 @@ export default function ProposalForm({
   const remainingAfterPayment = categoryRemaining - numAmount;
 
   let validationError: string | null = null;
-  if (numAmount > 0) {
+  if (!selectedCategory) {
+    validationError = "Create a budget category before creating a proposal";
+  } else if (numAmount > 0) {
     if (numAmount > fund.balance) {
       validationError = "Insufficient treasury balance";
     } else if (numAmount > categoryRemaining) {
-      validationError = `Insufficient ${selectedCategory?.name || "category"} budget`;
+      validationError = `Insufficient ${selectedCategory.name} budget`;
     }
   }
 

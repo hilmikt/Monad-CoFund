@@ -3,12 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@/components/Web3Providers";
-import { createFund } from "@/lib/contractActions";
+import { createCategory, createFund } from "@/lib/contractActions";
 import { isPositiveAmount } from "@/lib/validation";
 import TransactionStatus, { TxStatus } from "@/components/TransactionStatus";
-import { MagicWand, Warning } from "@phosphor-icons/react";
+import { FolderPlus, MagicWand, Plus, Warning } from "@phosphor-icons/react";
 import { MONAD_TESTNET_EXPLORER } from "@/lib/wagmi";
 import { MONAD_COFUND_ADDRESS } from "@/lib/contracts/MonadCoFund";
+
+interface CategoryDraft {
+  name: string;
+  budget: string;
+}
 
 export default function CreateFundPage() {
   const router = useRouter();
@@ -17,9 +22,16 @@ export default function CreateFundPage() {
   const [purpose, setPurpose] = useState("Shared expenses for our Goa trip");
   const [target, setTarget] = useState("100");
   const [threshold, setThreshold] = useState("2");
+  const [categories, setCategories] = useState<CategoryDraft[]>([{ name: "", budget: "" }]);
   
   const [status, setStatus] = useState<TxStatus>("idle");
   const [txHash, setTxHash] = useState<string>();
+
+  const updateCategory = (index: number, field: keyof CategoryDraft, value: string) => {
+    setCategories((current) => current.map((category, i) =>
+      i === index ? { ...category, [field]: value } : category
+    ));
+  };
 
   const isContractSet = MONAD_COFUND_ADDRESS !== "0x0000000000000000000000000000000000000000";
 
@@ -37,8 +49,21 @@ export default function CreateFundPage() {
       });
       
       if (res.success) {
+        const validCategories = categories.filter(
+          (category) => category.name.trim() && isPositiveAmount(category.budget)
+        );
+
+        for (const category of validCategories) {
+          const categoryRes = await createCategory(
+            res.fundId,
+            category.name.trim(),
+            Number(category.budget)
+          );
+          setTxHash(categoryRes.txHash);
+        }
+
         setStatus("success");
-        setTxHash(res.txHash);
+        setTxHash((current) => current || res.txHash);
         // Redirect to new fund's dashboard
         setTimeout(() => {
           router.push(`/fund/${res.fundId || 1}`);
@@ -134,6 +159,46 @@ export default function CreateFundPage() {
               className="w-full bg-surface-secondary border border-border rounded-button px-4 py-3 font-mono focus:outline-none focus:border-foreground transition-colors"
               placeholder="2"
             />
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <FolderPlus size={20} className="text-muted" />
+            <div>
+              <label className="block text-sm font-medium uppercase tracking-widest text-muted">Budget Categories</label>
+              <p className="text-xs text-muted mt-1">Add spending buckets now, or add them later from the fund dashboard.</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {categories.map((category, index) => (
+              <div key={index} className="grid grid-cols-[1fr_auto] gap-3">
+                <input
+                  type="text"
+                  value={category.name}
+                  onChange={(e) => updateCategory(index, "name", e.target.value)}
+                  className="w-full bg-surface-secondary border border-border rounded-button px-4 py-3 text-sm focus:outline-none focus:border-foreground transition-colors"
+                  placeholder="e.g. Villa"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  step="0.001"
+                  value={category.budget}
+                  onChange={(e) => updateCategory(index, "budget", e.target.value)}
+                  className="w-28 bg-surface-secondary border border-border rounded-button px-4 py-3 text-sm font-mono focus:outline-none focus:border-foreground transition-colors"
+                  placeholder="MON"
+                />
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setCategories((current) => [...current, { name: "", budget: "" }])}
+              className="flex items-center gap-1.5 text-xs font-mono text-muted hover:text-foreground transition-colors"
+            >
+              <Plus size={14} /> Add another category
+            </button>
           </div>
         </div>
 
