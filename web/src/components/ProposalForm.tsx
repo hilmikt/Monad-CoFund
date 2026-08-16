@@ -18,14 +18,18 @@ export default function ProposalForm({
   onComplete: () => void;
 }) {
   const { address } = useWallet();
-  const [categoryId, setCategoryId] = useState<number>(fund.categories[0]?.id || 1);
   const [recipient, setRecipient] = useState(address ?? "");
   const [amount, setAmount] = useState("");
   const [purpose, setPurpose] = useState("");
   const [status, setStatus] = useState<TxStatus>("idle");
   const [txHash, setTxHash] = useState<string>();
 
-  const selectedCategory = fund.categories.find((c) => c.id === Number(categoryId)) || fund.categories[0];
+  const selectedCategory = fund.categories[0] || {
+    id: 1,
+    name: fund.name,
+    allocated: fund.target,
+    spent: 0,
+  };
   const categoryRemaining = selectedCategory ? Math.max(0, selectedCategory.allocated - selectedCategory.spent) : 0;
 
   const numAmount = Number(amount) || 0;
@@ -43,7 +47,6 @@ export default function ProposalForm({
   }
 
   const isFormValid =
-    !!selectedCategory &&
     isValidAddress(recipient) &&
     isPositiveAmount(amount) &&
     purpose.length > 0 &&
@@ -51,7 +54,7 @@ export default function ProposalForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid || !selectedCategory) return;
+    if (!isFormValid) return;
 
     setStatus("confirming");
     try {
@@ -98,33 +101,8 @@ export default function ProposalForm({
       <div className="space-y-4 mb-6">
         {/* Category Selection */}
         <div>
-          <label className="block text-xs font-mono uppercase tracking-widest text-muted mb-2">
-            Budget Category
-          </label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(Number(e.target.value))}
-            disabled={fund.categories.length === 0}
-            className="w-full bg-surface-secondary border border-border rounded-button px-4 py-3 text-sm focus:outline-none focus:border-foreground transition-colors font-medium"
-          >
-            {fund.categories.length === 0 ? (
-              <option value={0}>No budget categories yet</option>
-            ) : (
-              fund.categories.map((cat) => {
-                const rem = Math.max(0, cat.allocated - cat.spent);
-                return (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name} ({formatMON(rem)} remaining of {formatMON(cat.allocated)})
-                  </option>
-                );
-              })
-            )}
-          </select>
-          {fund.categories.length === 0 && (
-            <p className="mt-2 text-xs text-muted">
-              The fund creator must add a budget category before creating a proposal.
-            </p>
-          )}
+          <p className="text-xs font-mono uppercase tracking-widest text-muted mb-2">Fund budget</p>
+          <div className="w-full bg-surface-secondary border border-border rounded-button px-4 py-3 text-sm font-medium">{fund.name}</div>
         </div>
 
         {/* Selected Category Info Banner */}

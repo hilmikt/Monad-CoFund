@@ -323,6 +323,10 @@ export async function createCategory(
     } catch {}
   }
 
+  if (categoryId === 0) {
+    throw new Error("Category transaction completed without a CategoryCreated event");
+  }
+
   return { success: true, categoryId, txHash: hash };
 }
 

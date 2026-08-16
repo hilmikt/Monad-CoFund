@@ -7,14 +7,12 @@ import { Fund } from "@/lib/types";
 import { getFundData, checkIsMember } from "@/lib/contractActions";
 import { MONAD_COFUND_ADDRESS } from "@/lib/contracts/MonadCoFund";
 import FundSummary from "@/components/FundSummary";
-import CategoryList from "@/components/CategoryList";
 import MemberList from "@/components/MemberList";
 import ProposalCard from "@/components/ProposalCard";
 import ContributionForm from "@/components/ContributionForm";
 import ProposalForm from "@/components/ProposalForm";
 import JoinFundButton from "@/components/JoinFundButton";
-import CreateCategoryForm from "@/components/CreateCategoryForm";
-import { Copy, Plus, Users, Wallet, FolderPlus, Warning } from "@phosphor-icons/react";
+import { Copy, Plus, Users, Wallet, Warning } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 export default function FundDashboard() {
@@ -31,7 +29,6 @@ export default function FundDashboard() {
   // Forms accordion states
   const [isContributeOpen, setIsContributeOpen] = useState(false);
   const [isProposalOpen, setIsProposalOpen] = useState(false);
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
   const isContractConfigured =
     MONAD_COFUND_ADDRESS !== "0x0000000000000000000000000000000000000000";
@@ -100,8 +97,6 @@ export default function FundDashboard() {
     );
   }
 
-  const isCreator =
-    address && fund.creator && address.toLowerCase() === fund.creator.toLowerCase();
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -166,43 +161,12 @@ export default function FundDashboard() {
           {/* Treasury Hero */}
           <FundSummary fund={fund} />
 
-          {/* Budget Categories */}
-          <div>
-            <CategoryList categories={fund.categories} />
-            {isCreator && (
-              <button
-                onClick={() => {
-                  setIsCategoryOpen(!isCategoryOpen);
-                  setIsContributeOpen(false);
-                  setIsProposalOpen(false);
-                }}
-                className="mt-3 text-xs font-mono text-muted hover:text-foreground flex items-center gap-1 transition-colors"
-              >
-                <FolderPlus size={14} /> {isCategoryOpen ? "Close category form" : "+ Add another category"}
-              </button>
-            )}
-          </div>
-
-          {/* Add Category Form (Creator only) */}
-          {isCategoryOpen && (
-            <div className="bg-surface border border-border rounded-card shadow-subtle overflow-hidden animate-in fade-in slide-in-from-top-4">
-              <CreateCategoryForm
-                fundId={fund.id}
-                onComplete={() => {
-                  setIsCategoryOpen(false);
-                  loadFund();
-                }}
-              />
-            </div>
-          )}
-          
           {/* Action Triggers */}
           <div className="grid sm:grid-cols-2 gap-4">
             <button 
               onClick={() => {
                 setIsContributeOpen(!isContributeOpen);
                 setIsProposalOpen(false);
-                setIsCategoryOpen(false);
               }}
               className={cn(
                 "py-4 font-medium rounded-button transition-all border flex items-center justify-center gap-2 text-sm shadow-subtle hover:scale-[0.99] active:scale-[0.98]",
@@ -217,7 +181,6 @@ export default function FundDashboard() {
               onClick={() => {
                 setIsProposalOpen(!isProposalOpen);
                 setIsContributeOpen(false);
-                setIsCategoryOpen(false);
               }}
               className={cn(
                 "py-4 font-medium rounded-button transition-all border flex items-center justify-center gap-2 text-sm shadow-subtle hover:scale-[0.99] active:scale-[0.98]",

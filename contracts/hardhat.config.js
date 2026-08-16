@@ -26,6 +26,11 @@ module.exports = {
       chainId: 10143,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
+    monadMainnet: {
+      url: "https://rpc.monad.xyz",
+      chainId: 143,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
   },
   etherscan: {
     apiKey: {
@@ -38,6 +43,14 @@ module.exports = {
         urls: {
           apiURL: "https://api.etherscan.io/v2/api?chainid=10143",
           browserURL: "https://testnet.monadscan.com",
+        },
+      },
+      {
+        network: "monadMainnet",
+        chainId: 143,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api?chainid=143",
+          browserURL: "https://monadscan.com",
         },
       },
     ],

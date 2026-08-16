@@ -6,7 +6,7 @@ import { Category, Proposal } from "@/lib/types";
 import { formatAddress, formatMON } from "@/lib/format";
 import { approveProposal, executeProposal, hasApprovedProposal } from "@/lib/contractActions";
 import TransactionStatus, { TxStatus } from "./TransactionStatus";
-import { Check, CaretRight, Warning, Folder } from "@phosphor-icons/react";
+import { Check, CaretRight, Warning } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { MONAD_TESTNET_EXPLORER } from "@/lib/wagmi";
 
@@ -114,11 +114,9 @@ export default function ProposalCard({
       "border border-border rounded-card bg-surface p-6 shadow-subtle mb-4 transition-all",
       isExecuted && "opacity-80 bg-surface-secondary/40"
     )}>
-      {/* Category Tag & Status */}
+      {/* Status */}
       <div className="flex justify-between items-center mb-4">
-        <span className="text-[11px] font-mono tracking-widest uppercase bg-surface-secondary border border-border px-2.5 py-1 rounded-pill flex items-center gap-1.5 font-medium">
-          <Folder size={12} className="text-muted" /> {category.name}
-        </span>
+        <span className="text-[11px] font-mono tracking-widest uppercase text-muted">Fund payment</span>
 
         {isExecuted ? (
           <span className="text-[10px] tracking-widest uppercase bg-green-light text-green-dark border border-green-light px-2.5 py-1 rounded-pill flex items-center gap-1 font-mono font-medium">
@@ -155,10 +153,10 @@ export default function ProposalCard({
         </div>
       </div>
 
-      {/* Category Budget Impact Preview */}
+      {/* Fund Budget Impact Preview */}
       <div className="bg-surface-secondary border border-border rounded-button p-3 mb-6 text-xs font-mono grid grid-cols-3 gap-2">
         <div>
-          <span className="text-muted block uppercase text-[9px] tracking-wider">Category Budget</span>
+          <span className="text-muted block uppercase text-[9px] tracking-wider">Fund Budget</span>
           <span className="font-medium">{formatMON(category.allocated)}</span>
         </div>
         <div>
@@ -167,7 +165,7 @@ export default function ProposalCard({
         </div>
         <div>
           <span className="text-muted block uppercase text-[9px] tracking-wider">
-            {isExecuted ? "Category Remaining" : "After Execution"}
+            {isExecuted ? "Fund Remaining" : "After Execution"}
           </span>
           <span className={cn(
             "font-semibold",
@@ -196,7 +194,7 @@ export default function ProposalCard({
       {exceedsCategoryBudget && (
         <div className="mb-4 p-2.5 bg-red-light border border-red-light rounded-button text-red-dark text-xs font-mono flex items-center gap-2">
           <Warning size={14} weight="bold" />
-          <span>Insufficient {category.name} budget</span>
+          <span>Insufficient fund budget</span>
         </div>
       )}
 

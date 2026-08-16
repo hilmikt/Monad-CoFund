@@ -2,13 +2,9 @@
 
 import { Fund } from "@/lib/types";
 import { formatMON } from "@/lib/format";
-import { Vault, Users, Folders } from "@phosphor-icons/react";
+import { Vault, Users, ShieldCheck } from "@phosphor-icons/react";
 
 export default function FundSummary({ fund }: { fund: Fund }) {
-  const totalAllocated = fund.categories.reduce((sum, c) => sum + c.allocated, 0);
-  const totalSpent = fund.categories.reduce((sum, c) => sum + c.spent, 0);
-  const percentage = totalAllocated > 0 ? Math.min(100, Math.round((totalSpent / totalAllocated) * 100)) : 0;
-
   return (
     <div className="bezel mb-8">
       <div className="bezel-core bg-surface p-7 md:p-10">
@@ -22,15 +18,7 @@ export default function FundSummary({ fund }: { fund: Fund }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-surface-secondary border border-border p-4 rounded-button font-mono text-xs">
-          <div>
-            <span className="text-muted block uppercase text-[9px] tracking-wider">Allocated</span>
-            <span className="font-semibold text-sm">{formatMON(totalAllocated)}</span>
-          </div>
-          <div>
-            <span className="text-muted block uppercase text-[9px] tracking-wider">Spent</span>
-            <span className="font-semibold text-sm">{formatMON(totalSpent)}</span>
-          </div>
+        <div className="grid grid-cols-2 gap-4 bg-surface-secondary border border-border p-4 rounded-button font-mono text-xs">
           <div>
             <span className="text-muted block uppercase text-[9px] tracking-wider">Members</span>
             <span className="font-semibold text-sm flex items-center gap-1">
@@ -38,24 +26,11 @@ export default function FundSummary({ fund }: { fund: Fund }) {
             </span>
           </div>
           <div>
-            <span className="text-muted block uppercase text-[9px] tracking-wider">Categories</span>
+            <span className="text-muted block uppercase text-[9px] tracking-wider">Approval threshold</span>
             <span className="font-semibold text-sm flex items-center gap-1">
-              <Folders size={12} /> {fund.categories.length}
+              <ShieldCheck size={12} /> {fund.approvalThreshold}
             </span>
           </div>
-        </div>
-      </div>
-
-      <div className="pt-6">
-        <div className="flex items-center justify-between text-xs font-mono text-muted mb-2">
-          <span>Overall Spending Progress</span>
-          <span>{formatMON(totalSpent)} spent / {formatMON(totalAllocated)} budget ({percentage}%)</span>
-        </div>
-        <div className="w-full bg-surface-secondary h-3 rounded-pill overflow-hidden border border-border">
-          <div 
-            className="bg-foreground h-full transition-all duration-1000 ease-out" 
-            style={{ width: `${percentage}%` }}
-          />
         </div>
       </div>
       </div>
